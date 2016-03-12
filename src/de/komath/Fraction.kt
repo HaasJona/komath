@@ -27,10 +27,18 @@ import java.math.BigInteger
 public class Fraction private constructor(val numerator: BigInteger, val denominator: BigInteger) : Comparable<Fraction> {
 
     companion object {
+
+        val NAN = Fraction(BigInteger.ZERO, BigInteger.ZERO)
+        val ZERO = Fraction(BigInteger.ZERO, BigInteger.ONE)
+        val ONE = Fraction(BigInteger.ONE, BigInteger.ONE)
+        val NEGATIVE_ONE = -ONE
+        val POSITIVE_INFINITY = Fraction(BigInteger.ONE, BigInteger.ZERO)
+        val NEGATIVE_INFINITY = -POSITIVE_INFINITY
+
         fun of(numerator: BigInteger, denominator: BigInteger): Fraction {
             var gcd = numerator.gcd(denominator)
             if (gcd == BigInteger.ZERO) {
-                return Fraction(BigInteger.ZERO, BigInteger.ZERO)
+                return NAN
             }
             if (denominator < BigInteger.ZERO) gcd = -gcd
             return Fraction(numerator / gcd, denominator / gcd)
@@ -67,16 +75,14 @@ public class Fraction private constructor(val numerator: BigInteger, val denomin
 
     operator fun div(other: Fraction) = of(numerator * other.denominator, denominator * other.numerator)
 
-    operator fun mod(other: Fraction): Fraction {
-        return other * (this / other).frac();
-    }
-    //
-    //    operator fun rangeTo(other: Fraction) : FractionRange {
-    //
-    //    }
+    operator fun mod(other: Fraction) = other * (this / other).frac()
+
+    operator fun unaryMinus(): Fraction = Fraction(-numerator, denominator);
+
+    operator fun unaryPlus(): Fraction = this;
 
     override fun compareTo(other: Fraction): Int {
-        return 0;
+        return (numerator * other.denominator).compareTo(other.numerator * denominator);
     }
 
     fun compareTo(other: BigInteger): Int {
@@ -122,9 +128,5 @@ public class Fraction private constructor(val numerator: BigInteger, val denomin
         return result
     }
 
-
-}
-
-class FractionRange {
 
 }
