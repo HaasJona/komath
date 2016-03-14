@@ -218,7 +218,6 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Iterable<BigInt
     fun toFractionInRange(value: ClosedRange<Double>): Fraction {
         var a = Fraction.ZERO
         var b = Fraction.POSITIVE_INFINITY
-        var i = 0
         for (bigInteger in this) {
             var c = Fraction.of(
                     bigInteger * b.numerator + a.numerator,
@@ -249,7 +248,7 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Iterable<BigInt
     }
 }
 
-class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigInteger> {
+private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigInteger> {
 
     var a :BigInteger
     var b :BigInteger
