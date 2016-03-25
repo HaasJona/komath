@@ -54,9 +54,9 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
         private val DOUBLE_DENOMINATOR = BigInteger.ZERO.setBit(1075)
 
-        fun of(value: Double): Fraction {
-            if(value.isNaN()) return NaN
-            if(value.isInfinite()){
+        fun ofExact(value: Double): Fraction {
+            if (value.isNaN()) return NaN
+            if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
             }
             val bits = java.lang.Double.doubleToLongBits(value)
@@ -67,9 +67,9 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             return of(BigInteger.valueOf(significand) * BigInteger.ZERO.setBit(exp), DOUBLE_DENOMINATOR)
         }
 
-        fun of(value: ClosedRange<Double>): Fraction{
-            var tmp = of((value.start + value.endInclusive) / 2.0).continuedFraction()
-            return tmp.toFraction() { fraction -> value.contains(fraction.toDouble()) };
+        fun of(value: Double): Fraction {
+            var tmp = ofExact(value).continuedFraction()
+            return tmp.toFraction() { fraction -> value == fraction.toDouble() };
         }
 
     }
@@ -144,7 +144,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return Fraction(numerator % denominator, denominator)
     }
 
-    fun continuedFraction() : ContinuedFraction {
+    fun continuedFraction(): ContinuedFraction {
         return ContinuedFraction(
                 Iterable {
                     ContinuedFractionIterator(this)
@@ -152,7 +152,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         )
     }
 
-    override fun equals(other: Any?): Boolean{
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
 
@@ -164,7 +164,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return true
     }
 
-    override fun hashCode(): Int{
+    override fun hashCode(): Int {
         var result = numerator.hashCode()
         result += 31 * result + denominator.hashCode()
         return result
@@ -175,7 +175,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     operator fun component2() = denominator
 }
 
-class ContinuedFraction(private val arg: Iterable<BigInteger>)  : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
+class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
     override fun iterator(): Iterator<BigInteger> {
         return arg.iterator()
     }
@@ -187,53 +187,53 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>)  : Comparable<Con
             builder.append(bigInteger)
             builder.append(", ")
             n++;
-            if(n > 10){
+            if (n > 10) {
                 builder.append("...  ")
                 break
             }
         }
-        builder.setLength(builder.length-2)
+        builder.setLength(builder.length - 2)
         builder.append("]")
         return builder.toString();
     }
 
-    fun toFraction() : Fraction {
+    fun toFraction(): Fraction {
         return toFraction(Int.MAX_VALUE);
     }
 
-    fun toFraction(n: Int) : Fraction {
-        var olda = BigInteger.ONE
-        var oldb = BigInteger.ZERO
-        var cura = BigInteger.ZERO
-        var curb = BigInteger.ONE
+    fun toFraction(n: Int): Fraction {
+        var olda = BigInteger.ZERO
+        var oldb = BigInteger.ONE
+        var cura = BigInteger.ONE
+        var curb = BigInteger.ZERO
         var i = 0
         for (bigInteger in this) {
-            val newa = cura + bigInteger * olda
-            val newb=  curb + bigInteger * oldb
+            val newa = cura * bigInteger + olda
+            val newb = curb * bigInteger + oldb
             olda = cura
             cura = newa
             oldb = curb
             curb = newb
-            if(++i == n) break
+            if (++i == n) break
         }
         return Fraction.of(cura, curb);
     }
 
     fun toFraction(condition: (Fraction) -> Boolean): Fraction {
-        var olda = BigInteger.ONE
-        var oldb = BigInteger.ZERO
-        var cura = BigInteger.ZERO
-        var curb = BigInteger.ONE
+        var olda = BigInteger.ZERO
+        var oldb = BigInteger.ONE
+        var cura = BigInteger.ONE
+        var curb = BigInteger.ZERO
         for (bigInteger in this) {
-            val newa = cura + bigInteger * olda
-            val newb=  curb + bigInteger * oldb
+            val newa = cura * bigInteger + olda
+            val newb = curb * bigInteger + oldb
 
-            if(condition(Fraction.of(newa, newb))) {
+            if (condition(Fraction.of(newa, newb))) {
                 var bTmp = bigInteger;
-                while (true){
+                while (true) {
                     bTmp -= BigInteger.ONE;
-                    val newaX = cura + bTmp * olda
-                    val newbX=  curb + bTmp * oldb
+                    val newaX = cura * bTmp + olda
+                    val newbX = curb * bTmp + oldb
                     if (!condition(Fraction.of(newaX, newbX))) {
                         return Fraction.of(cura, curb);
                     }
@@ -286,8 +286,8 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>)  : Comparable<Con
 
 private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigInteger> {
 
-    var a :BigInteger
-    var b :BigInteger
+    var a: BigInteger
+    var b: BigInteger
 
     init {
         a = fraction.numerator
