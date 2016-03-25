@@ -69,7 +69,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
         fun of(value: ClosedRange<Double>): Fraction{
             var tmp = of((value.start + value.endInclusive) / 2.0).continuedFraction()
-            return tmp.toFractionInRange(value);
+            return tmp.toFraction() { fraction -> value.contains(fraction.toDouble()) };
         }
 
     }
@@ -175,7 +175,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     operator fun component2() = denominator
 }
 
-class ContinuedFraction(private val arg: Iterable<BigInteger>) : Iterable<BigInteger> {
+class ContinuedFraction(private val arg: Iterable<BigInteger>)  : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
     override fun iterator(): Iterator<BigInteger> {
         return arg.iterator()
     }
@@ -197,99 +197,19 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Iterable<BigInt
         return builder.toString();
     }
 
-    fun toFraction(n: Int) : Fraction {
-        var a = Fraction.ZERO
-        var b = Fraction.POSITIVE_INFINITY
-        var i = 0
-        for (bigInteger in this) {
-            val c = Fraction.of(
-                    bigInteger * b.numerator + a.numerator,
-                    bigInteger * b.denominator + a.denominator
-            )
-            a = b
-            b = c
-            if(++i == n) break
-        }
-        return b
-    }
-
-    fun toFractionInRange(range: ClosedRange<Double>): Fraction {
-        var a = Fraction.ZERO
-        var b = Fraction.POSITIVE_INFINITY
-        for (bigInteger in this) {
-            var c = Fraction.of(
-                    bigInteger * b.numerator + a.numerator,
-                    bigInteger * b.denominator + a.denominator
-            )
-
-            if(range.contains(c.toDouble())) {
-                var bTmp = bigInteger;
-                while (true){
-                    bTmp -= BigInteger.ONE;
-                    val c2 = Fraction.of(
-                            bTmp * b.numerator + a.numerator,
-                            bTmp * b.denominator + a.denominator
-                    )
-                    if(range.contains(c2.toDouble())){
-                        c = c2
-                    }
-                    else {
-                        return c
-                    }
-                }
-            }
-
-            a = b
-            b = c
-        }
-        return b
-    }
-}
-
-class GeneralizedContinuedFraction(private val arg: Iterable<Pair<BigInteger, BigInteger>>) : Iterable<Pair<BigInteger, BigInteger>> {
-
-    companion object {
-        val PI = GeneralizedContinuedFraction(arg = GeneralFractionIterable({
-            num: BigInteger ->
-            if(num < BigInteger.ZERO) {
-                Pair<BigInteger, BigInteger>(BigInteger.ZERO, BigInteger.ONE)
-            }
-            else {
-                Pair<BigInteger, BigInteger>(if (num == BigInteger.ZERO) BigInteger.valueOf(4) else num * num, BigInteger.valueOf(2L) * num + BigInteger.ONE)
-            }
-        }))
-    }
-
-    override fun iterator(): Iterator<Pair<BigInteger, BigInteger>> {
-        return arg.iterator()
-    }
-
-    override fun toString(): String {
-        val builder = StringBuilder("[")
-        var n = 0;
-        for (bigInteger in this) {
-            builder.append(bigInteger)
-            builder.append(", ")
-            n++;
-            if(n > 10){
-                builder.append("...  ")
-                break
-            }
-        }
-        builder.setLength(builder.length-2)
-        builder.append("]")
-        return builder.toString();
+    fun toFraction() : Fraction {
+        return toFraction(Int.MAX_VALUE);
     }
 
     fun toFraction(n: Int) : Fraction {
         var olda = BigInteger.ONE
         var oldb = BigInteger.ZERO
-        var cura = BigInteger.ZERO // TBD = b0
+        var cura = BigInteger.ZERO
         var curb = BigInteger.ONE
         var i = 0
         for (bigInteger in this) {
-            val newa = bigInteger.second * cura + bigInteger.first * olda
-            val newb=  bigInteger.second * curb + bigInteger.first * oldb
+            val newa = cura + bigInteger * olda
+            val newb=  curb + bigInteger * oldb
             olda = cura
             cura = newa
             oldb = curb
@@ -298,28 +218,70 @@ class GeneralizedContinuedFraction(private val arg: Iterable<Pair<BigInteger, Bi
         }
         return Fraction.of(cura, curb);
     }
-}
 
-class GeneralFractionIterable constructor(val f: (i : BigInteger) -> Pair<BigInteger, BigInteger>): Iterable<Pair<BigInteger, BigInteger>> {
-    override fun iterator(): Iterator<Pair<BigInteger, BigInteger>> {
-        return GeneralFractionIterator(f);
+    fun toFraction(condition: (Fraction) -> Boolean): Fraction {
+        var olda = BigInteger.ONE
+        var oldb = BigInteger.ZERO
+        var cura = BigInteger.ZERO
+        var curb = BigInteger.ONE
+        for (bigInteger in this) {
+            val newa = cura + bigInteger * olda
+            val newb=  curb + bigInteger * oldb
+
+            if(condition(Fraction.of(newa, newb))) {
+                var bTmp = bigInteger;
+                while (true){
+                    bTmp -= BigInteger.ONE;
+                    val newaX = cura + bTmp * olda
+                    val newbX=  curb + bTmp * oldb
+                    if (!condition(Fraction.of(newaX, newbX))) {
+                        return Fraction.of(cura, curb);
+                    }
+                }
+            }
+            olda = cura
+            cura = newa
+            oldb = curb
+            curb = newb
+        }
+        return Fraction.of(cura, curb);
     }
 
-}
-
-class GeneralFractionIterator constructor(val f: (i : BigInteger) -> Pair<BigInteger, BigInteger>): Iterator<Pair<BigInteger, BigInteger>>{
-    var i = BigInteger.ZERO;
-
-    override fun hasNext(): Boolean {
-        return true
+    override fun compareTo(other: ContinuedFraction): Int {
+        return toFraction().compareTo(other.toFraction());
     }
 
-    override fun next(): Pair<BigInteger, BigInteger> {
-        val pair = f(i)
-        i += BigInteger.ONE;
-        return pair;
+    fun toBigInteger() = toFraction().toBigInteger()
+
+    fun toBigDecimal(scale: Int, roundingMode: RoundingMode) = toFraction().toBigDecimal(scale, roundingMode)
+
+    override fun toByte(): Byte {
+        return toFraction().toByte()
     }
 
+    override fun toChar(): Char {
+        return toFraction().toChar()
+    }
+
+    override fun toDouble(): Double {
+        return toFraction().toDouble()
+    }
+
+    override fun toFloat(): Float {
+        return toFraction().toFloat()
+    }
+
+    override fun toInt(): Int {
+        return toFraction().toInt()
+    }
+
+    override fun toLong(): Long {
+        return toFraction().toLong()
+    }
+
+    override fun toShort(): Short {
+        return toFraction().toShort()
+    }
 }
 
 private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigInteger> {
