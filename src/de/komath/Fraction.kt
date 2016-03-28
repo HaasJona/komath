@@ -24,19 +24,72 @@ package de.komath
 
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.MathContext
 import java.math.RoundingMode
 
+/**
+ * Represents a mathematical fraction or ratio expressed by a numerator and a denominator with a value of
+ * [numerator]/[denominator]. A fraction is always expressed in a normalized form with the denominator always
+ * being positive (or zero) and reduced as much as possible. Examples:
+ *
+ * * of(2,4) = 1/2
+ * * of(2,-4) = -1/2
+ * * of(3,-8) = -3/8
+ *
+ * Similar to a double, a fraction can have special values representing infinity and NaN. This way, all the usual
+ * operations can not result in arithmetic exceptions. The special values are represented as follows:
+ *
+ * * 0/1 = Zero
+ * * 1/0 = Positive infinity
+ * * -1/0 = Negative infinity
+ * * 0/0 = NaN
+ *
+ * Again, all parameters are automatically reduced when constructing a fraction, and thus, these are the only possible
+ * "special" values. For example constructing a fraction with the value of 1234/0 will again result in 1/0 (positive infinity)
+ * because the gcd of 1234 and 0 is 1234 (according to [BigInteger.gcd]).
+ *
+ * Unlike doubles, there is no distinction between positive zero and negative zero, because the fraction class can
+ * represent arbitrarily small numbers and thus zero always represents exactly zero.
+ *
+ * This is a data based, immutable and threadsafe class.
+ */
 class Fraction private constructor(val numerator: BigInteger, val denominator: BigInteger) : Comparable<Fraction>, Number() {
 
     companion object {
 
+        /**
+         * Represents the value 0/0 (NaN)
+         */
         val NaN = Fraction(BigInteger.ZERO, BigInteger.ZERO)
+
+        /**
+         * Represents the value 0/1 (Zero)
+         */
         val ZERO = Fraction(BigInteger.ZERO, BigInteger.ONE)
+
+        /**
+         * Represents the value 1/1 (One)
+         */
         val ONE = Fraction(BigInteger.ONE, BigInteger.ONE)
+
+        /**
+         * Represents the value -1/1 (Negative One)
+         */
         val NEGATIVE_ONE = -ONE
+
+        /**
+         * Represents the value 1/0 (Positive Infinity)
+         */
         val POSITIVE_INFINITY = Fraction(BigInteger.ONE, BigInteger.ZERO)
+
+        /**
+         * Represents the value -1/0 (Negative Infinity)
+         */
         val NEGATIVE_INFINITY = -POSITIVE_INFINITY
 
+        /**
+         * Returns a Fraction with the specified [numerator] and [denominator]. The given values may be normalized and reduced.
+         */
         fun of(numerator: BigInteger = BigInteger.ONE, denominator: BigInteger = BigInteger.ONE): Fraction {
             var gcd = numerator.gcd(denominator)
             if (gcd == BigInteger.ZERO) {
@@ -46,19 +99,69 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             return Fraction(numerator / gcd, denominator / gcd)
         }
 
+        /**
+         * Returns a Fraction with the specified [numerator] and [denominator]. The given values may be normalized and reduced.
+         */
         fun of(numerator: Long = 1L, denominator: Long = 1L): Fraction = of(BigInteger.valueOf(numerator), BigInteger.valueOf(denominator))
+
+        /**
+         * Returns a Fraction with the specified [numerator] and [denominator]. The given values may be normalized and reduced.
+         */
         fun of(numerator: Int = 1, denominator: Int = 1): Fraction = of(numerator.toLong(), denominator.toLong())
+
+        /**
+         * Returns a Fraction with the specified integer value. The [denominator] will always be 1.
+         */
         fun of(value: BigInteger): Fraction = of(value, BigInteger.ONE)
+
+        /**
+         * Returns a Fraction with the specified integer value. The [denominator] will always be 1.
+         */
         fun of(value: Long): Fraction = of(BigInteger.valueOf(value), BigInteger.ONE)
+
+        /**
+         * Returns a Fraction with the specified integer value. The [denominator] will always be 1.
+         */
         fun of(value: Int): Fraction = of(value.toLong())
 
-        private val DOUBLE_DENOMINATOR = BigInteger.ZERO.setBit(1075)
-
+        /**
+         * Returns a fraction that represents the exact value of the specified IEEE 754 double. Special values
+         * like NaN and Infinity are translated to the special fractions appropriately.
+         *
+         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0 in the case of [Double.NaN]).
+         */
         fun ofExact(value: Double): Fraction {
+            if (value == 0.0) return ZERO
             if (value.isNaN()) return NaN
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
             }
+            return ofExactNoSpecialValue(value)
+        }
+
+        /**
+         * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double.
+         *
+         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0 in the case of [NaN]).
+         */
+        fun of(value: Double): Fraction {
+            if (value == 0.0) return ZERO
+            if (value.isNaN()) return NaN
+            if (value.isInfinite()) {
+                return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
+            }
+            var tmp = ofExactNoSpecialValue(value).continuedFraction()
+            return tmp.toFraction({ fraction -> value == fraction.toDouble() })
+        }
+
+        private val DOUBLE_DENOMINATOR = BigInteger.ZERO.setBit(1075)
+
+        /**
+         * Bit fiddling to extract exact double value, special doubles like 0.0 or NaN must be handled separately.
+         */
+        private fun ofExactNoSpecialValue(value: Double): Fraction {
             val bits = java.lang.Double.doubleToLongBits(value)
             val sign = bits < 0
             val exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
@@ -67,39 +170,109 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             return of(BigInteger.valueOf(significand) * BigInteger.ZERO.setBit(exp), DOUBLE_DENOMINATOR)
         }
 
-        fun of(value: Double): Fraction {
-            var tmp = ofExact(value).continuedFraction()
-            return tmp.toFraction() { fraction -> value == fraction.toDouble() };
-        }
-
     }
 
+    /**
+     * Returns the string representation of this fraction, which is equal to [numerator] + `/` + [denominator], for example `-13/5`.
+     */
     override fun toString(): String {
         return "$numerator/$denominator"
     }
 
+    /**
+     * Returns the mixed number representation of this fraction, which is formatted as `[-]a b/c`, for example
+     *
+     *   * `1 3/5` for the fraction `8/5`
+     *   * `-2 3/5` for the fraction `-13/5`
+     *
+     * If the integer part (`a`) or the [denominator] would be zero, this returns the same String as [toString]
+     */
     fun toMixedString(): String {
+        if(denominator == BigInteger.ZERO) return toString()
         val divideAndRemainder = numerator.divideAndRemainder(denominator)
-        return divideAndRemainder[0].toString() + " " + divideAndRemainder[1].toString() + "/" + denominator.toString();
+        if(divideAndRemainder[0] == BigInteger.ZERO) return toString()
+        return divideAndRemainder[0].toString() + " " + divideAndRemainder[1].abs().toString() + "/" + denominator.toString()
     }
 
-    override fun toDouble() = numerator.toDouble() / denominator.toDouble()
+    /**
+     * Converts this fraction to the nearest double value.
+     */
+    override fun toDouble(): Double {
+        // Inefficient, but more accurate than numerator.toDouble() / denominator.toDouble()
+        return toDecimalString(16).toDouble()
+    }
+
+    /**
+     * Returns a decimal string representation of this fraction with the specified number of maximum decimal places.
+     *
+     * Special values like Infinity or NaN are returned in the same way as [Double.toString]
+     */
+    fun toDecimalString(n: Int): String {
+        if(denominator == BigInteger.ZERO){
+            if(numerator > BigInteger.ZERO){
+                return Double.POSITIVE_INFINITY.toString()
+            } else if(numerator < BigInteger.ZERO){
+                return Double.NEGATIVE_INFINITY.toString()
+            } else {
+                return Double.NaN.toString()
+            }
+        }
+        val s = StringBuilder()
+        var divideAndRemainder = numerator.divideAndRemainder(denominator)
+        s.append(divideAndRemainder[0]).append('.')
+        var remainder = divideAndRemainder[1].abs()
+        for(i in 1..n){
+            remainder *= BigInteger.TEN
+            divideAndRemainder = remainder.divideAndRemainder(denominator)
+            remainder = divideAndRemainder[1]
+            s.append(divideAndRemainder[0])
+            if(remainder == BigInteger.ZERO) break
+        }
+        return s.toString()
+    }
 
     override fun toFloat() = toDouble().toFloat()
 
-    fun toBigInteger() = numerator / denominator
+    /**
+     * Returns the BigInteger value (rounded towards zero) of this fraction. If the denominator is zero, returns zero.
+     */
+    fun toBigInteger() = if(denominator == BigInteger.ZERO) BigInteger.ZERO else numerator / denominator
 
+    /**
+     * Returns this as a BigDecimal
+     * @param  scale scale of the {@code BigDecimal} quotient to be returned.
+     * @param  roundingMode rounding mode to apply.
+     * @throws ArithmeticException if denominator is zero
+     */
     fun toBigDecimal(scale: Int, roundingMode: RoundingMode) = BigDecimal(numerator).divide(BigDecimal(denominator), scale, roundingMode)
 
-    override fun toLong() = (numerator / denominator).toLong()
+    /**
+     * Returns this as a BigDecimal
+     * @param  mathContext the [MathContext] to use for rounding and accuracy
+     * @throws ArithmeticException if denominator is zero
+     */
+    fun toBigDecimal(mathContext: MathContext) = BigDecimal(numerator).divide(BigDecimal(denominator), mathContext)
 
-    override fun toInt() = (numerator / denominator).toInt()
-
-    override fun toShort() = (numerator / denominator).toShort()
-
-    override fun toChar() = (numerator / denominator).toChar()
-
-    override fun toByte() = (numerator / denominator).toByte()
+    /**
+     * Returns `toBigInteger().toLong()`. If the denominator is zero, returns zero.
+     */
+    override fun toLong() = toBigInteger().toLong()
+    /**
+     * Returns `toBigInteger().toInt()`. If the denominator is zero, returns zero.
+     */
+    override fun toInt() = toBigInteger().toInt()
+    /**
+     * Returns `toBigInteger().toShort()`. If the denominator is zero, returns zero.
+     */
+    override fun toShort() = toBigInteger().toShort()
+    /**
+     * Returns `toBigInteger().toChar()`. If the denominator is zero, returns zero.
+     */
+    override fun toChar() = toBigInteger().toChar()
+    /**
+     * Returns `toBigInteger().toByte()`. If the denominator is zero, returns zero.
+     */
+    override fun toByte() = toBigInteger().toByte()
 
     operator fun plus(other: Fraction) = of(numerator * other.denominator + other.numerator * denominator, denominator * other.denominator)
 
@@ -132,11 +305,11 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     }
 
     fun compareTo(other: Double): Int {
-        return compareTo(of(other))
+        return compareTo(ofExact(other))
     }
 
     fun compareTo(other: Float): Int {
-        return compareTo(of(other.toDouble()))
+        return compareTo(ofExact(other.toDouble()))
     }
 
     fun frac(): Fraction {
@@ -176,6 +349,12 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 }
 
 class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
+
+    companion object {
+        fun of(value: Collection<BigInteger>): ContinuedFraction = ContinuedFraction(value)
+        fun of(value: Fraction) : ContinuedFraction = value.continuedFraction()
+    }
+
     override fun iterator(): Iterator<BigInteger> {
         return arg.iterator()
     }
@@ -197,11 +376,7 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
         return builder.toString();
     }
 
-    fun toFraction(): Fraction {
-        return toFraction(Int.MAX_VALUE);
-    }
-
-    fun toFraction(n: Int): Fraction {
+    fun toFraction(n: Int = Int.MAX_VALUE): Fraction {
         var olda = BigInteger.ZERO
         var oldb = BigInteger.ONE
         var cura = BigInteger.ONE
