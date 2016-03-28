@@ -248,6 +248,9 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return toDecimalString(16).toDouble()
     }
 
+    /**
+     * Converts this fraction to the nearest float value.
+     */
     override fun toFloat(): Float {
         // Inefficient, but more accurate than numerator.toFloat() / denominator.toFloat()
         return toDecimalString(9).toFloat()
@@ -361,12 +364,29 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return compareTo(ofExact(other.toDouble()))
     }
 
+    /**
+     * Returns the fractional part of this fraction, which is this fraction with any integer part removed. For example
+     *
+     * `frac(13/10) = frac(43/10) = 3/10`
+     *
+     * negative fractions will return a negative fractional part, but otherwise work the same. For example
+     *
+     * `frac(-13/10) = frac(-43/10) = -3/10`
+     *
+     * The returned fraction is always between (inclusive) -1/1 and 1/1. If `this` is infinity or NaN, `this` is returned.
+     */
     fun frac(): Fraction {
         if (denominator == BigInteger.ZERO) return this
         return Fraction(numerator % denominator, denominator)
     }
 
+    /**
+     * Converts this fraction into a continued fraction representation.
+     *
+     * @throws ArithmeticException if the denominator is zero (`this` is Infinity or NaN)
+     */
     fun continuedFraction(): ContinuedFraction {
+        if(denominator == BigInteger.ZERO) throw ArithmeticException(toDecimalString(0));
         return ContinuedFraction(
                 Iterable {
                     ContinuedFractionIterator(this)
@@ -393,10 +413,26 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     operator fun component2() = denominator
 }
 
+/**
+ * A representation of a simple continued fraction. This class currently expects a finite continued fraction, feeding it
+ * infinitely many BigIntegers may lead to some algorithms not terminating correctly for now.
+ */
 class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
 
     companion object {
-        fun of(value: Collection<BigInteger>): ContinuedFraction = ContinuedFraction(value)
+        /**
+         * Creates a continued fraction from a collection of BigIntegers [b0; b1, b2, ...]
+         */
+        fun of(value: Collection<BigInteger>): ContinuedFraction {
+            return when {
+                value.isEmpty() -> throw IllegalArgumentException("Empty collection")
+                else -> ContinuedFraction(value.toList())
+            }
+        }
+
+        /**
+         * Converts an existing fraction into a continued fraction representation
+         */
         fun of(value: Fraction) : ContinuedFraction = value.continuedFraction()
     }
 
@@ -409,7 +445,7 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
         var n = 0;
         for (bigInteger in this) {
             builder.append(bigInteger)
-            builder.append(", ")
+            builder.append(if (n == 0) "; " else ", ")
             n++;
             if (n > 10) {
                 builder.append("...  ")
@@ -421,6 +457,12 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
         return builder.toString();
     }
 
+    /**
+     * Converts this continued fraction back into a normal fraction representation.
+     *
+     * @param n How many convergents to calculate. This can be used to simplify a fraction. Defaults to
+     * Int.MAX_VALUE, which should return the original value (creating a continued fraction with more integers will likely lead to other problems)
+     */
     fun toFraction(n: Int = Int.MAX_VALUE): Fraction {
         var olda = BigInteger.ZERO
         var oldb = BigInteger.ONE
@@ -439,6 +481,15 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
         return Fraction.of(cura, curb);
     }
 
+    /**
+     * Converts this continued fraction to a regular fraction and simplifies it as much as possible as long as the
+     * supplied condition is true. This method first generates more and more exact first order convergents until the
+     * condition returns true and then it tries to find the best second order convergent by simplifying the fraction
+     * until the condition returns false again. The last fraction for which the convergent returns true is returned.
+     *
+     * The condition is supposed to return true for `toFraction()` as parameter, however this is not enforced.
+     * If the condition never returns true for any approximation, this method returns the exact fractional value.
+     */
     fun toFraction(condition: (Fraction) -> Boolean): Fraction {
         var olda = BigInteger.ZERO
         var oldb = BigInteger.ONE
