@@ -129,7 +129,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * like NaN and Infinity are translated to the special fractions appropriately.
          *
          * Because the binary exponent representation of a double value, the [denominator] of the created fraction
-         * will always be a power of 2 (or 0 in the case of [Double.NaN]).
+         * will always be a power of 2 (or 0 in the case of [NaN]).
          */
         fun ofExact(value: Double): Fraction {
             if (value == 0.0) return ZERO
@@ -170,6 +170,52 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             return of(BigInteger.valueOf(significand) * BigInteger.ZERO.setBit(exp), DOUBLE_DENOMINATOR)
         }
 
+        /**
+         * Returns a fraction that represents the exact value of the specified IEEE 754 single (float). Special values
+         * like NaN and Infinity are translated to the special fractions appropriately.
+         *
+         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0 in the case of [NaN]).
+         */
+        fun ofExact(value: Float): Fraction {
+            if (value == 0.0f) return ZERO
+            if (value.isNaN()) return NaN
+            if (value.isInfinite()) {
+                return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
+            }
+            return ofExactNoSpecialValue(value)
+        }
+
+        /**
+         * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float.
+         *
+         * Because the binary exponent representation of a float value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0 in the case of [NaN]).
+         */
+        fun of(value: Float): Fraction {
+            if (value == 0.0f) return ZERO
+            if (value.isNaN()) return NaN
+            if (value.isInfinite()) {
+                return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
+            }
+            var tmp = ofExactNoSpecialValue(value).continuedFraction()
+            return tmp.toFraction({ fraction -> value == fraction.toFloat() })
+        }
+
+        private val FLOAT_DENOMINATOR = BigInteger.ZERO.setBit(150)
+
+        /**
+         * Bit fiddling to extract exact float value, special floats like 0.0 or NaN must be handled separately.
+         */
+        private fun ofExactNoSpecialValue(value: Float): Fraction {
+            val bits = java.lang.Float.floatToIntBits(value)
+            val sign = bits < 0
+            val exp = (bits and 0x78000000 ushr 52).toInt()
+            var significand = (bits and 0x007fffff) or 0x00800000
+            if (sign) significand = -significand
+            return of(BigInteger.valueOf(significand.toLong()) * BigInteger.ZERO.setBit(exp), FLOAT_DENOMINATOR)
+        }
+
     }
 
     /**
@@ -202,6 +248,11 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return toDecimalString(16).toDouble()
     }
 
+    override fun toFloat(): Float {
+        // Inefficient, but more accurate than numerator.toFloat() / denominator.toFloat()
+        return toDecimalString(9).toFloat()
+    }
+
     /**
      * Returns a decimal string representation of this fraction with the specified number of maximum decimal places.
      *
@@ -230,8 +281,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         }
         return s.toString()
     }
-
-    override fun toFloat() = toDouble().toFloat()
 
     /**
      * Returns the BigInteger value (rounded towards zero) of this fraction. If the denominator is zero, returns zero.
@@ -288,27 +337,27 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
     operator fun unaryPlus(): Fraction = this
 
-    override fun compareTo(other: Fraction): Int {
+    override infix operator fun compareTo(other: Fraction): Int {
         return (numerator * other.denominator).compareTo(other.numerator * denominator)
     }
 
-    fun compareTo(other: BigInteger): Int {
+    infix operator fun compareTo(other: BigInteger): Int {
         return compareTo(of(other))
     }
 
-    fun compareTo(other: Long): Int {
+    infix operator fun compareTo(other: Long): Int {
         return compareTo(of(other))
     }
 
-    fun compareTo(other: Int): Int {
+    infix operator fun compareTo(other: Int): Int {
         return compareTo(of(other))
     }
 
-    fun compareTo(other: Double): Int {
+    infix operator fun compareTo(other: Double): Int {
         return compareTo(ofExact(other))
     }
 
-    fun compareTo(other: Float): Int {
+    infix operator fun compareTo(other: Float): Int {
         return compareTo(ofExact(other.toDouble()))
     }
 
@@ -337,11 +386,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         return true
     }
 
-    override fun hashCode(): Int {
-        var result = numerator.hashCode()
-        result += 31 * result + denominator.hashCode()
-        return result
-    }
+    override fun hashCode() = numerator.hashCode() + denominator.hashCode() * 2047
 
     operator fun component1() = numerator
 
@@ -479,4 +524,26 @@ private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigIntege
         b = h[1]
         return h[0]
     }
+}
+
+
+// Extension functions for reverse operators
+infix operator fun BigInteger.compareTo(fraction: Fraction): Int {
+    return Fraction.of(this).compareTo(fraction);
+}
+
+infix operator fun Long.compareTo(fraction: Fraction): Int {
+    return Fraction.of(this).compareTo(fraction);
+}
+
+infix operator fun Int.compareTo(fraction: Fraction): Int {
+    return Fraction.of(this).compareTo(fraction);
+}
+
+infix operator fun Double.compareTo(fraction: Fraction): Int {
+    return Fraction.ofExact(this).compareTo(fraction);
+}
+
+infix operator fun Float.compareTo(fraction: Fraction): Int {
+    return Fraction.ofExact(this).compareTo(fraction);
 }
