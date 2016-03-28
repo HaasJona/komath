@@ -143,7 +143,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         /**
          * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double.
          *
-         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
+         * Because of the binary exponent representation of a double value, the [denominator] of the created fraction
          * will always be a power of 2 (or 0 in the case of [NaN]).
          */
         fun of(value: Double): Fraction {
@@ -189,7 +189,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         /**
          * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float.
          *
-         * Because the binary exponent representation of a float value, the [denominator] of the created fraction
+         * Because of the binary exponent representation of a float value, the [denominator] of the created fraction
          * will always be a power of 2 (or 0 in the case of [NaN]).
          */
         fun of(value: Float): Fraction {
@@ -210,7 +210,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         private fun ofExactNoSpecialValue(value: Float): Fraction {
             val bits = java.lang.Float.floatToIntBits(value)
             val sign = bits < 0
-            val exp = (bits and 0x78000000 ushr 52).toInt()
+            val exp = (bits and 0x78000000 ushr 23).toInt()
             var significand = (bits and 0x007fffff) or 0x00800000
             if (sign) significand = -significand
             return of(BigInteger.valueOf(significand.toLong()) * BigInteger.ZERO.setBit(exp), FLOAT_DENOMINATOR)
