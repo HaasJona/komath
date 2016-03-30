@@ -141,10 +141,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         }
 
         /**
-         * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double.
-         *
-         * Because of the binary exponent representation of a double value, the [denominator] of the created fraction
-         * will always be a power of 2 (or 0 in the case of [NaN]).
+         * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double (within double accuracy).
          */
         fun of(value: Double): Fraction {
             if (value == 0.0) return ZERO
@@ -187,10 +184,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         }
 
         /**
-         * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float.
-         *
-         * Because of the binary exponent representation of a float value, the [denominator] of the created fraction
-         * will always be a power of 2 (or 0 in the case of [NaN]).
+         * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float (within float accuracy).
          */
         fun of(value: Float): Fraction {
             if (value == 0.0f) return ZERO
