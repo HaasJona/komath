@@ -239,7 +239,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      */
     override fun toDouble(): Double {
         // Inefficient, but more accurate than numerator.toDouble() / denominator.toDouble()
-        return toDecimalString(16).toDouble()
+        return toString(16).toDouble()
     }
 
     /**
@@ -247,15 +247,16 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      */
     override fun toFloat(): Float {
         // Inefficient, but more accurate than numerator.toFloat() / denominator.toFloat()
-        return toDecimalString(9).toFloat()
+        return toString(9).toFloat()
     }
 
     /**
-     * Returns a decimal string representation of this fraction with the specified number of maximum decimal places.
+     * Returns a string representation of this fraction with the specified number of maximum decimal places and the specified radix (default: 10).
      *
      * Special values like Infinity or NaN are returned in the same way as [Double.toString]
      */
-    fun toDecimalString(n: Int): String {
+    fun toString(n: Int, radix: Int = 10): String {
+        if(radix < 2) throw IllegalArgumentException("radix")
         if(denominator == BigInteger.ZERO){
             if(numerator > BigInteger.ZERO){
                 return Double.POSITIVE_INFINITY.toString()
@@ -265,15 +266,16 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
                 return Double.NaN.toString()
             }
         }
+        val radixBigInt = BigInteger.valueOf(radix.toLong())
         val s = StringBuilder()
         var divideAndRemainder = numerator.divideAndRemainder(denominator)
-        s.append(divideAndRemainder[0]).append('.')
+        if(n > 0) s.append(divideAndRemainder[0].toString(radix)).append('.')
         var remainder = divideAndRemainder[1].abs()
         for(i in 1..n){
-            remainder *= BigInteger.TEN
+            remainder *= radixBigInt
             divideAndRemainder = remainder.divideAndRemainder(denominator)
             remainder = divideAndRemainder[1]
-            s.append(divideAndRemainder[0])
+            s.append(divideAndRemainder[0].toString(radix))
             if(remainder == BigInteger.ZERO) break
         }
         return s.toString()
@@ -380,7 +382,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * @throws ArithmeticException if the denominator is zero (`this` is Infinity or NaN)
      */
     fun continuedFraction(): ContinuedFraction {
-        if(denominator == BigInteger.ZERO) throw ArithmeticException(toDecimalString(0));
+        if(denominator == BigInteger.ZERO) throw ArithmeticException(toString(0));
         return ContinuedFraction(
                 Iterable {
                     ContinuedFractionIterator(this)
