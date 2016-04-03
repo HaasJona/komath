@@ -128,8 +128,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * Returns a fraction that represents the exact value of the specified IEEE 754 double. Special values
          * like NaN and Infinity are translated to the special fractions appropriately.
          *
-         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
-         * will always be a power of 2 (or 0 in the case of [NaN]).
+         * Because of the binary exponent representation of a double value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0).
          */
         fun ofExact(value: Double): Fraction {
             if (value == 0.0) return ZERO
@@ -171,8 +171,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * Returns a fraction that represents the exact value of the specified IEEE 754 single (float). Special values
          * like NaN and Infinity are translated to the special fractions appropriately.
          *
-         * Because the binary exponent representation of a double value, the [denominator] of the created fraction
-         * will always be a power of 2 (or 0 in the case of [NaN]).
+         * Because of the binary exponent representation of a float value, the [denominator] of the created fraction
+         * will always be a power of 2 (or 0).
          */
         fun ofExact(value: Float): Fraction {
             if (value == 0.0f) return ZERO
