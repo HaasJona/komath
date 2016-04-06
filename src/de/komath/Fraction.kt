@@ -164,7 +164,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             val exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
             var significand = (bits and 0x000fffffffffffffL) or 0x0010000000000000L
             if (sign) significand = -significand
-            return of(BigInteger.valueOf(significand) * BigInteger.ZERO.setBit(exp), DOUBLE_DENOMINATOR)
+            return of(BigInteger.valueOf(significand).shiftLeft(exp), DOUBLE_DENOMINATOR)
         }
 
         /**
@@ -207,7 +207,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             val exp = (bits and 0x78000000 ushr 23).toInt()
             var significand = (bits and 0x007fffff) or 0x00800000
             if (sign) significand = -significand
-            return of(BigInteger.valueOf(significand.toLong()) * BigInteger.ZERO.setBit(exp), FLOAT_DENOMINATOR)
+            return of(BigInteger.valueOf(significand.toLong()).shiftLeft(exp), FLOAT_DENOMINATOR)
         }
 
     }
@@ -239,6 +239,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      */
     override fun toDouble(): Double {
         // Inefficient, but more accurate than numerator.toDouble() / denominator.toDouble()
+        // TBD this is not correct for very small fractions
         return toString(16).toDouble()
     }
 
@@ -247,6 +248,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      */
     override fun toFloat(): Float {
         // Inefficient, but more accurate than numerator.toFloat() / denominator.toFloat()
+        // TBD this is not correct for very small fractions
         return toString(9).toFloat()
     }
 
@@ -361,15 +363,15 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     }
 
     /**
-     * Returns the fractional part of this fraction, which is this fraction with any integer part removed. For example
+     * Returns the fractional part of this fraction, which is this fraction with any integer part removed. For example:
      *
      * `frac(13/10) = frac(43/10) = 3/10`
      *
-     * negative fractions will return a negative fractional part, but otherwise work the same. For example
+     * Negative fractions will return a negative fractional part, but otherwise work the same. For example:
      *
      * `frac(-13/10) = frac(-43/10) = -3/10`
      *
-     * The returned fraction is always between (inclusive) -1/1 and 1/1. If `this` is infinity or NaN, `this` is returned.
+     * The returned fraction is always between (exclusive) -1/1 and 1/1. If `this` is infinity or NaN, `this` is returned instead.
      */
     fun frac(): Fraction {
         if (denominator == BigInteger.ZERO) return this
