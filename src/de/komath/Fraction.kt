@@ -582,9 +582,9 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         fun ofDouble(value : Double) : FpHelper{
             val bits = java.lang.Double.doubleToLongBits(value)
             val sign = bits < 0
-            val exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
+            var exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
             var significand = (bits and 0x000fffffffffffffL)
-            if(exp > 0) significand = significand or 0x0010000000000000L
+            if(exp > 0) significand = significand or 0x0010000000000000L else exp = 1
             if (sign) significand = -significand
             return FpHelper(BigInteger.valueOf(significand), BigInteger.valueOf((exp - 1075).toLong()))
         }
@@ -595,82 +595,75 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         fun ofFloat(value : Float) : FpHelper{
             val bits = java.lang.Float.floatToIntBits(value)
             val sign = bits < 0
-            val exp = (bits and 0x78000000 ushr 23).toInt()
+            var exp = (bits and 0x78000000 ushr 23).toInt()
             var significand = (bits and 0x007fffff)
-            if(exp > 0) significand = significand or 0x00800000
+            if(exp > 0) significand = significand or 0x00800000 else exp = 1
             if (sign) significand = -significand
             return FpHelper(BigInteger.valueOf(significand.toLong()), BigInteger.valueOf((exp - 150).toLong()))
         }
     }
 
-    fun toDouble() :Double{
+    fun toDouble(): Double {
         var mantissa = significand.abs()
         val bitLength = mantissa.bitLength()
         var e = exp;
-        if(bitLength > 53){
-            e += BigInteger.valueOf((bitLength - 53).toLong());
-            mantissa = mantissa.shiftRight(bitLength - 53)
-        }
+        e += BigInteger.valueOf((bitLength - 53).toLong());
+        mantissa = mantissa.shiftRight(bitLength - 53)
         e += BigInteger.valueOf(1075);
-        if(e < BigInteger.ZERO){
+        if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
+        if (e < BigInteger.ZERO) {
             try {
-                mantissa = mantissa.shiftRight(-(e.intValueExact()));
-            }
-            catch (e : ArithmeticException){
+                mantissa = mantissa.shiftRight(1 - (e.intValueExact()));
+            } catch (e: ArithmeticException) {
                 mantissa = BigInteger.ZERO;
             }
             e = BigInteger.ZERO;
         }
         var intExp = try {
             e.intValueExact()
-        }
-        catch (e : ArithmeticException){
+        } catch (e: ArithmeticException) {
             2047
         }
-        if(intExp > 2046){
+        if (intExp > 2046) {
             // Inf
             intExp = 2047;
             mantissa = BigInteger.ZERO;
         }
-        var doubleBits : Long = (mantissa.longValueExact() and 0x000fffffffffffffL) or (intExp.toLong().shl(52))
-        if(significand.signum() < 0){
+        var doubleBits: Long = (mantissa.longValueExact() and 0x000fffffffffffffL) or (intExp.toLong().shl(52))
+        if (significand.signum() < 0) {
             doubleBits = doubleBits or 1L.shl(63);
         }
         return java.lang.Double.longBitsToDouble(doubleBits)
     }
 
-
-    fun toFloat() :Float{
+    fun toFloat(): Float {
         var mantissa = significand.abs()
         val bitLength = mantissa.bitLength()
         var e = exp;
-        if(bitLength > 24){
-            e += BigInteger.valueOf((bitLength - 24).toLong());
-            mantissa = mantissa.shiftRight(bitLength - 24)
-        }
+        e += BigInteger.valueOf((bitLength - 24).toLong());
+        mantissa = mantissa.shiftRight(bitLength - 24)
         e += BigInteger.valueOf(150);
-        if(e < BigInteger.ZERO){
+        if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
+        if (e < BigInteger.ZERO) {
             try {
-                mantissa = mantissa.shiftRight(-(e.intValueExact()));
-            }
-            catch (e : ArithmeticException){
+                mantissa = mantissa.shiftRight(1 - (e.intValueExact()));
+            } catch (e: ArithmeticException) {
                 mantissa = BigInteger.ZERO;
             }
             e = BigInteger.ZERO;
         }
         var intExp = try {
             e.intValueExact()
-        }
-        catch (e : ArithmeticException){
+        } catch (e: ArithmeticException) {
             255
         }
-        if(intExp > 254){
+        if (intExp > 254) {
             // Inf
             intExp = 255;
             mantissa = BigInteger.ZERO;
         }
-        var intBits : Int = (mantissa.intValueExact() and 0x007fffff) or (intExp.shl(23))
-        if(significand.signum() < 0){
+        var intBits: Int = (mantissa.intValueExact() and 0x007fffff) or (intExp.shl(23))
+        if (significand.signum() < 0) {
             intBits = intBits or 1.shl(31);
         }
         return java.lang.Float.intBitsToFloat(intBits)
