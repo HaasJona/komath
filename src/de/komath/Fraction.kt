@@ -144,7 +144,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double (within double accuracy).
          */
         fun of(value: Double): Fraction {
-            if (value == 0.0) return ZERO
             if (value.isNaN()) return NaN
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
@@ -175,7 +174,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * will always be a power of 2 (or 0).
          */
         fun ofExact(value: Float): Fraction {
-            if (value == 0.0f) return ZERO
             if (value.isNaN()) return NaN
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
@@ -573,6 +571,111 @@ private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigIntege
         b = h[1]
         return h[0]
     }
+}
+
+class FpHelper(val significand: BigInteger, val exp: BigInteger){
+
+    companion object{
+        /**
+         * Bit fiddling to extract exact double value, special doubles like Infinity or NaN must be handled separately.
+         */
+        fun ofDouble(value : Double) : FpHelper{
+            val bits = java.lang.Double.doubleToLongBits(value)
+            val sign = bits < 0
+            val exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
+            var significand = (bits and 0x000fffffffffffffL)
+            if(exp > 0) significand = significand or 0x0010000000000000L
+            if (sign) significand = -significand
+            return FpHelper(BigInteger.valueOf(significand), BigInteger.valueOf((exp - 1075).toLong()))
+        }
+
+        /**
+         * Bit fiddling to extract exact float value, special floats like Infinity or NaN must be handled separately.
+         */
+        fun ofFloat(value : Float) : FpHelper{
+            val bits = java.lang.Float.floatToIntBits(value)
+            val sign = bits < 0
+            val exp = (bits and 0x78000000 ushr 23).toInt()
+            var significand = (bits and 0x007fffff)
+            if(exp > 0) significand = significand or 0x00800000
+            if (sign) significand = -significand
+            return FpHelper(BigInteger.valueOf(significand.toLong()), BigInteger.valueOf((exp - 150).toLong()))
+        }
+    }
+
+    fun toDouble() :Double{
+        var mantissa = significand.abs()
+        val bitLength = mantissa.bitLength()
+        var e = exp;
+        if(bitLength > 53){
+            e += BigInteger.valueOf((bitLength - 53).toLong());
+            mantissa = mantissa.shiftRight(bitLength - 53)
+        }
+        e += BigInteger.valueOf(1075);
+        if(e < BigInteger.ZERO){
+            try {
+                mantissa = mantissa.shiftRight(-(e.intValueExact()));
+            }
+            catch (e : ArithmeticException){
+                mantissa = BigInteger.ZERO;
+            }
+            e = BigInteger.ZERO;
+        }
+        var intExp = try {
+            e.intValueExact()
+        }
+        catch (e : ArithmeticException){
+            2047
+        }
+        if(intExp > 2046){
+            // Inf
+            intExp = 2047;
+            mantissa = BigInteger.ZERO;
+        }
+        var doubleBits : Long = (mantissa.longValueExact() and 0x000fffffffffffffL) or (intExp.toLong().shl(52))
+        if(significand.signum() < 0){
+            doubleBits = doubleBits or 1L.shl(63);
+        }
+        return java.lang.Double.longBitsToDouble(doubleBits)
+    }
+
+
+    fun toFloat() :Float{
+        var mantissa = significand.abs()
+        val bitLength = mantissa.bitLength()
+        var e = exp;
+        if(bitLength > 24){
+            e += BigInteger.valueOf((bitLength - 24).toLong());
+            mantissa = mantissa.shiftRight(bitLength - 24)
+        }
+        e += BigInteger.valueOf(150);
+        if(e < BigInteger.ZERO){
+            try {
+                mantissa = mantissa.shiftRight(-(e.intValueExact()));
+            }
+            catch (e : ArithmeticException){
+                mantissa = BigInteger.ZERO;
+            }
+            e = BigInteger.ZERO;
+        }
+        var intExp = try {
+            e.intValueExact()
+        }
+        catch (e : ArithmeticException){
+            255
+        }
+        if(intExp > 254){
+            // Inf
+            intExp = 255;
+            mantissa = BigInteger.ZERO;
+        }
+        var intBits : Int = (mantissa.intValueExact() and 0x007fffff) or (intExp.shl(23))
+        if(significand.signum() < 0){
+            intBits = intBits or 1.shl(31);
+        }
+        return java.lang.Float.intBitsToFloat(intBits)
+    }
+
 }
 
 
