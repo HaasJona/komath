@@ -37,7 +37,7 @@ import java.math.RoundingMode
  * * of(3,-8) = -3/8
  *
  * Similar to a double, a fraction can have special values representing infinity and NaN. This way, all the usual
- * operations can not result in arithmetic exceptions. The special values are represented as follows:
+ * operations do not result in arithmetic exceptions. The special values are represented as follows:
  *
  * * 0/1 = Zero
  * * 1/0 = Positive infinity
@@ -45,8 +45,7 @@ import java.math.RoundingMode
  * * 0/0 = NaN
  *
  * Again, all parameters are automatically reduced when constructing a fraction, and thus, these are the only possible
- * "special" values. For example constructing a fraction with the value of 1234/0 will again result in 1/0 (positive infinity)
- * because the gcd of 1234 and 0 is 1234 (according to [BigInteger.gcd]).
+ * "special" values. For example constructing a fraction with the value of 1234/0 will again result in 1/0 (positive infinity).
  *
  * Unlike doubles, there is no distinction between positive zero and negative zero, because the fraction class can
  * represent arbitrarily small numbers and thus zero always represents exactly zero.
