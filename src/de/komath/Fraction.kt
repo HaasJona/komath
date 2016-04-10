@@ -130,6 +130,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          *
          * Because of the binary exponent representation of a double value, the [denominator] of the created fraction
          * will always be a power of 2 (or 0).
+         *
+         * For example `Fraction.ofExact(0.3) == 5404319552844595/18014398509481984`. If you need 3/10 instead, try [Fraction.of].
          */
         fun ofExact(value: Double): Fraction {
             if (value == 0.0) return ZERO
@@ -142,6 +144,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
         /**
          * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double (within double accuracy).
+         *
+         * For example `Fraction.of(0.3) == 3/10`
          */
         fun of(value: Double): Fraction {
             if (value.isNaN()) return NaN
@@ -170,6 +174,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          *
          * Because of the binary exponent representation of a float value, the [denominator] of the created fraction
          * will always be a power of 2 (or 0).
+         *
+         * For example `Fraction.ofExact(0.3f) == 5033165/16777216`. If you need 3/10 instead, try [Fraction.of].
          */
         fun ofExact(value: Float): Fraction {
             if (value.isNaN()) return NaN
@@ -181,6 +187,8 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
         /**
          * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float (within float accuracy).
+         *
+         * For example `Fraction.of(0.3f) == 3/10`
          */
         fun of(value: Float): Fraction {
             if (value.isNaN()) return NaN
@@ -231,7 +239,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * Converts this fraction to the nearest double value.
      */
     override fun toDouble(): Double {
-        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()) + BigInteger.valueOf(52)
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(52)
         val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, -negExp).toDouble()
     }
@@ -240,7 +248,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * Converts this fraction to the nearest float value.
      */
     override fun toFloat(): Float {
-        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()) + BigInteger.valueOf(23)
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(23)
         val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, -negExp).toFloat()
     }
@@ -594,7 +602,7 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         fun ofFloat(value : Float) : FpHelper{
             val bits = java.lang.Float.floatToIntBits(value)
             val sign = bits < 0
-            var exp = (bits and 0x78000000 ushr 23).toInt()
+            var exp = (bits and 0x7f800000 ushr 23).toInt()
             var significand = (bits and 0x007fffff)
             if(exp > 0) significand = significand or 0x00800000 else exp = 1
             if (sign) significand = -significand
@@ -608,7 +616,7 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         var e = exp;
         e += BigInteger.valueOf((bitLength - 53).toLong());
         if(bitLength > 52)
-            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 53), RoundingMode.HALF_DOWN)
+            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 53), RoundingMode.HALF_EVEN)
         else
             mantissa = mantissa.shiftRight(bitLength - 53)
         e += BigInteger.valueOf(1075);
@@ -643,8 +651,8 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         val bitLength = mantissa.bitLength()
         var e = exp;
         e += BigInteger.valueOf((bitLength - 24).toLong());
-        if(bitLength > 52)
-            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 24), RoundingMode.HALF_DOWN)
+        if(bitLength > 23)
+            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 24), RoundingMode.HALF_EVEN)
         else
             mantissa = mantissa.shiftRight(bitLength - 24)
         e += BigInteger.valueOf(150);
