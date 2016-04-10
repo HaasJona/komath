@@ -148,22 +148,20 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
             }
-            var tmp = ofExactNoSpecialValue(value).continuedFraction()
+            val tmp = ofExactNoSpecialValue(value).continuedFraction()
             return tmp.toFraction({ fraction -> value == fraction.toDouble() })
         }
-
-        private val DOUBLE_DENOMINATOR = BigInteger.ZERO.setBit(1075)
 
         /**
          * Bit fiddling to extract exact double value, special doubles like 0.0 or NaN must be handled separately.
          */
         private fun ofExactNoSpecialValue(value: Double): Fraction {
-            val bits = java.lang.Double.doubleToLongBits(value)
-            val sign = bits < 0
-            val exp = (bits and 0x7ff0000000000000L ushr 52).toInt()
-            var significand = (bits and 0x000fffffffffffffL) or 0x0010000000000000L
-            if (sign) significand = -significand
-            return of(BigInteger.valueOf(significand).shiftLeft(exp), DOUBLE_DENOMINATOR)
+            val helper = FpHelper.ofDouble(value)
+            val exponent = helper.exp.intValueExact()
+            if(exponent >= 0)
+                return of(helper.significand.shiftLeft(exponent), BigInteger.ONE)
+            else
+                return of(helper.significand, BigInteger.ZERO.setBit(-exponent))
         }
 
         /**
@@ -185,27 +183,24 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float (within float accuracy).
          */
         fun of(value: Float): Fraction {
-            if (value == 0.0f) return ZERO
             if (value.isNaN()) return NaN
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
             }
-            var tmp = ofExactNoSpecialValue(value).continuedFraction()
+            val tmp = ofExactNoSpecialValue(value).continuedFraction()
             return tmp.toFraction({ fraction -> value == fraction.toFloat() })
         }
-
-        private val FLOAT_DENOMINATOR = BigInteger.ZERO.setBit(150)
 
         /**
          * Bit fiddling to extract exact float value, special floats like 0.0 or NaN must be handled separately.
          */
         private fun ofExactNoSpecialValue(value: Float): Fraction {
-            val bits = java.lang.Float.floatToIntBits(value)
-            val sign = bits < 0
-            val exp = (bits and 0x78000000 ushr 23).toInt()
-            var significand = (bits and 0x007fffff) or 0x00800000
-            if (sign) significand = -significand
-            return of(BigInteger.valueOf(significand.toLong()).shiftLeft(exp), FLOAT_DENOMINATOR)
+            val helper = FpHelper.ofFloat(value)
+            val exponent = helper.exp.intValueExact()
+            if(exponent >= 0)
+                return of(helper.significand.shiftLeft(exponent), BigInteger.ONE)
+            else
+                return of(helper.significand, BigInteger.ZERO.setBit(-exponent))
         }
 
     }
