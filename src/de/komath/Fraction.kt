@@ -134,7 +134,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          * For example `Fraction.ofExact(0.3) == 5404319552844595/18014398509481984`. If you need 3/10 instead, try [Fraction.of].
          */
         fun ofExact(value: Double): Fraction {
-            if (value == 0.0) return ZERO
             if (value.isNaN()) return NaN
             if (value.isInfinite()) {
                 return if (value > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
