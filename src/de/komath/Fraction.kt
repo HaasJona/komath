@@ -231,18 +231,18 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * Converts this fraction to the nearest double value.
      */
     override fun toDouble(): Double {
-        // Inefficient, but more accurate than numerator.toDouble() / denominator.toDouble()
-        // TBD this is not correct for very small fractions
-        return toString(16).toDouble()
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()) + BigInteger.valueOf(52)
+        val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
+        return FpHelper(significand, -negExp).toDouble()
     }
 
     /**
      * Converts this fraction to the nearest float value.
      */
     override fun toFloat(): Float {
-        // Inefficient, but more accurate than numerator.toFloat() / denominator.toFloat()
-        // TBD this is not correct for very small fractions
-        return toString(9).toFloat()
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()) + BigInteger.valueOf(23)
+        val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
+        return FpHelper(significand, -negExp).toFloat()
     }
 
     /**
@@ -492,13 +492,17 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
 
             if (condition(Fraction.of(newa, newb))) {
                 var bTmp = bigInteger;
+                var oldaX = newa
+                var oldbX = newb
                 while (true) {
                     bTmp -= BigInteger.ONE;
                     val newaX = cura * bTmp + olda
                     val newbX = curb * bTmp + oldb
                     if (!condition(Fraction.of(newaX, newbX))) {
-                        return Fraction.of(cura, curb);
+                        return Fraction.of(oldaX, oldbX)
                     }
+                    oldaX = newaX
+                    oldbX = newbX
                 }
             }
             olda = cura
@@ -603,7 +607,10 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         val bitLength = mantissa.bitLength()
         var e = exp;
         e += BigInteger.valueOf((bitLength - 53).toLong());
-        mantissa = mantissa.shiftRight(bitLength - 53)
+        if(bitLength > 52)
+            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 53), RoundingMode.HALF_DOWN)
+        else
+            mantissa = mantissa.shiftRight(bitLength - 53)
         e += BigInteger.valueOf(1075);
         if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
         if (e < BigInteger.ZERO) {
@@ -636,7 +643,10 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
         val bitLength = mantissa.bitLength()
         var e = exp;
         e += BigInteger.valueOf((bitLength - 24).toLong());
-        mantissa = mantissa.shiftRight(bitLength - 24)
+        if(bitLength > 52)
+            mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 24), RoundingMode.HALF_DOWN)
+        else
+            mantissa = mantissa.shiftRight(bitLength - 24)
         e += BigInteger.valueOf(150);
         if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
         if (e < BigInteger.ZERO) {
@@ -662,6 +672,12 @@ class FpHelper(val significand: BigInteger, val exp: BigInteger){
             intBits = intBits or 1.shl(31);
         }
         return java.lang.Float.intBitsToFloat(intBits)
+    }
+
+    fun divide(p: BigInteger, q: BigInteger , mode : RoundingMode) : BigInteger {
+      val pDec = BigDecimal(p);
+      val qDec = BigDecimal(q);
+      return pDec.divide(qDec, 0, mode).toBigIntegerExact();
     }
 
 }
