@@ -210,6 +210,25 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
                 return of(helper.significand, BigInteger.ZERO.setBit(-exponent))
         }
 
+        /**
+         * Returns a fraction that represents the exact value of the specified BigDecimal.
+         *
+         * The [denominator] of the created fraction will always be a power of 10.
+         *
+         * For example `Fraction.of(BigDecimal.valueOf(0.3)) == 3/10`.
+         */
+        fun of(value: BigDecimal) : Fraction {
+            if(value.scale() > 0)
+                return of(value.unscaledValue(), BigInteger.TEN.pow(value.scale()))
+            else
+                return of(value.toBigIntegerExact())
+        }
+
+        /**
+         * Returns a fraction that represents the exact value of `numerator/denominator`.
+         */
+        fun of(numerator: BigDecimal, denominator: BigDecimal) : Fraction = of(numerator) / of(denominator)
+
     }
 
     /**
@@ -231,7 +250,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         if(denominator == BigInteger.ZERO) return toString()
         val divideAndRemainder = numerator.divideAndRemainder(denominator)
         if(divideAndRemainder[0] == BigInteger.ZERO) return toString()
-        return divideAndRemainder[0].toString() + " " + divideAndRemainder[1].abs().toString() + "/" + denominator.toString()
+        return "${divideAndRemainder[0]} ${divideAndRemainder[1].abs()}/${denominator}"
     }
 
     /**
@@ -369,7 +388,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     }
 
     /**
-     * Returns the fractional part of this fraction, which is this fraction with any integer part removed. For example:
+     * Returns the fractional part of this fraction, which is this fraction with any integer part removed ("this modulo 1"). For example:
      *
      * `frac(13/10) = frac(43/10) = 3/10`
      *
@@ -402,10 +421,12 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
 
-        other as Fraction
+        return equals(other as Fraction)
+    }
 
-        if (numerator != other.numerator) return false
+    fun equals(other: Fraction): Boolean {
         if (denominator != other.denominator) return false
+        if (numerator != other.numerator) return false
 
         return true
     }
