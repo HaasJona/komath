@@ -238,6 +238,9 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * Converts this fraction to the nearest double value.
      */
     override fun toDouble(): Double {
+        if(this == NaN) return Double.NaN
+        if(this == POSITIVE_INFINITY) return Double.POSITIVE_INFINITY
+        if(this == NEGATIVE_INFINITY) return Double.NEGATIVE_INFINITY
         val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(52)
         val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, -negExp).toDouble()
@@ -247,6 +250,9 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      * Converts this fraction to the nearest float value.
      */
     override fun toFloat(): Float {
+        if(this == NaN) return Float.NaN
+        if(this == POSITIVE_INFINITY) return Float.POSITIVE_INFINITY
+        if(this == NEGATIVE_INFINITY) return Float.NEGATIVE_INFINITY
         val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(23)
         val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, -negExp).toFloat()
