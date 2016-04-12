@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016.
+ * Copyright (c) 2016 Jonathan Haas.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -211,8 +211,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
 
         /**
          * Returns a fraction that represents the exact value of the specified BigDecimal.
-         *
-         * The [denominator] of the created fraction will always be a power of 10.
          *
          * For example `Fraction.of(BigDecimal.valueOf(0.3)) == 3/10`.
          */
