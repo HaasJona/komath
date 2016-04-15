@@ -26,6 +26,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.MathContext
 import java.math.RoundingMode
+import java.util.regex.Pattern
 
 /**
  * Represents a mathematical fraction or ratio expressed by a numerator and a denominator with a value of
@@ -226,6 +227,28 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
          */
         fun of(numerator: BigDecimal, denominator: BigDecimal) : Fraction = of(numerator) / of(denominator)
 
+
+        //val HEX_PATTERN = Pattern.compile("^\\s*(?:($INT) +)?($DEC)(\\s*/\\s*$DEC)\\s*$")
+
+        val HEX_PATTERN_INLINE = Pattern.compile("^\\s*(?:([+-]?\\p{Digit}+) +)?([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?)(?:\\s*/\\s*([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?))?\\s*$")
+
+        fun of(value: String) : Fraction {
+            val matcher = HEX_PATTERN_INLINE.matcher(value)
+            if(matcher.matches()){
+                val int = matcher.group(1)
+                val numerator = matcher.group(2)
+                val denominator = matcher.group(3)
+                var result = of(BigDecimal(numerator!!))
+                if(denominator != null){
+                    result /= of(BigDecimal(denominator))
+                }
+                if(int != null) {
+                    result += of(BigDecimal(int))
+                }
+                return result
+            }
+            return of(value.toDouble())
+        }
     }
 
     /**
@@ -522,6 +545,7 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
                 var oldaX = newa
                 var oldbX = newb
                 while (true) {
+                    // TBD Binary search here
                     bTmp -= BigInteger.ONE;
                     val newaX = cura * bTmp + olda
                     val newbX = curb * bTmp + oldb
