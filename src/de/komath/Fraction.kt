@@ -407,11 +407,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
      */
     fun continuedFraction(): ContinuedFraction {
         if(denominator == BigInteger.ZERO) throw ArithmeticException(toString(0));
-        return ContinuedFraction(
-                Iterable {
-                    ContinuedFractionIterator(this)
-                }
-        )
+        return ContinuedFraction.of(this)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -439,7 +435,7 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
  * A representation of a simple continued fraction. This class currently expects a finite continued fraction, feeding it
  * infinitely many BigIntegers may lead to some algorithms not terminating correctly for now.
  */
-class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
+class ContinuedFraction private constructor(private val arg: Iterable<BigInteger>) : Comparable<ContinuedFraction>, Number(), Iterable<BigInteger> {
 
     companion object {
         /**
@@ -455,7 +451,7 @@ class ContinuedFraction(private val arg: Iterable<BigInteger>) : Comparable<Cont
         /**
          * Converts an existing fraction into a continued fraction representation
          */
-        fun of(value: Fraction) : ContinuedFraction = value.continuedFraction()
+        fun of(value: Fraction): ContinuedFraction = ContinuedFraction(Iterable { ContinuedFractionIterator(value) })
     }
 
     override fun iterator(): Iterator<BigInteger> {
