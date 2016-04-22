@@ -524,9 +524,10 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
 
     /**
      * Converts this continued fraction to a regular fraction and simplifies it as much as possible as long as the
-     * supplied condition is true. This method first generates more and more exact first order convergents until the
-     * condition returns true and then it tries to find the best second order convergent by simplifying the fraction
-     * until the condition returns false again. The last fraction for which the convergent returns true is returned.
+     * supplied condition is true. This method first generates more and more exact first order approximations until the
+     * condition returns true. Generating second order approximations could in theory result in even simpler fractions,
+     * but this causes some performance difficulties that haven't been solved yet. In the future this method may be changed to
+     * (optionally) generate the best second order approximation.
      *
      * The condition is supposed to return true for `toFraction()` as parameter, however this is not enforced.
      * If the condition never returns true for any approximation, this method returns the exact fractional value.
@@ -541,20 +542,21 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
             val newb = curb * bigInteger + oldb
 
             if (condition(Fraction.of(newa, newb))) {
-                var bTmp = bigInteger;
-                var oldaX = newa
-                var oldbX = newb
-                while (true) {
-                    // TBD Binary search here
-                    bTmp -= BigInteger.ONE;
-                    val newaX = cura * bTmp + olda
-                    val newbX = curb * bTmp + oldb
-                    if (!condition(Fraction.of(newaX, newbX))) {
-                        return Fraction.of(oldaX, oldbX)
-                    }
-                    oldaX = newaX
-                    oldbX = newbX
-                }
+//                var bTmp = bigInteger;
+//                var oldaX = newa
+//                var oldbX = newb
+//                while (true) {
+//                    // TBD Binary search here
+//                    bTmp -= BigInteger.ONE;
+//                    val newaX = cura * bTmp + olda
+//                    val newbX = curb * bTmp + oldb
+//                    if (!condition(Fraction.of(newaX, newbX))) {
+//                        return Fraction.of(oldaX, oldbX)
+//                    }
+//                    oldaX = newaX
+//                    oldbX = newbX
+//                }
+                return Fraction.of(newa, newb);
             }
             olda = cura
             cura = newa
