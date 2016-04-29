@@ -230,6 +230,36 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
 
         val HEX_PATTERN_INLINE = Pattern.compile("^\\s*(?:([+-]?\\p{Digit}+) +)?([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?)(?:\\s*/\\s*([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?))?\\s*$")
 
+        /**
+         * Parses a String and returns the fractional value of this String. The string can
+         * in particular have one of the following forms:
+         *
+         * -    Decimal (example 3.65, anything that can be parsed by [BigDecimal])
+         * -    Mixed String (example 5 3/4, as returned by [toMixedString])
+         * -    Normal fraction (example 13/5, as returned by [toString])
+         * -    Anything than can be parsed as a double (especially Infinity or NaN).
+         *
+         * Generally for any regular value, the String is expected to be
+         *
+         * -    A integer value followed by whitespace (optional, default = 0) followed by
+         * -    A decimal value representing the numerator followed by
+         * -    A slash (optionally surrounded by whitespace) and a decimal value representing the denominator (optional, default = 1)
+         *
+         * The resulting fraction then has a value of
+         *
+         *     integer + sign(integer) * numerator / denominator
+         *
+         * with sign(n) = -1 for n < 0, else 1
+         *
+         * Note that this means that "-5 3/4" will result in a fraction with the value of `-4 - 3/5` (-23/5)
+         * (as expected) and that it is usually not useful to repeat the sign at the numerator or denominator when
+         * creating a fraction using the mixed string representation. A [value] argument of "-4 -3/5" would actually
+         * result in a [Fraction] with a value of `-4 + 3/5` (-17/5).
+         *
+         * Note that this also means, that you can use decimals as [numerator] and [denominator] here.
+         * For example `Fraction.of("12.5/0.1")` would result in a [Fraction] with the value of 125/1.
+         *
+         */
         fun of(value: String) : Fraction {
             val matcher = HEX_PATTERN_INLINE.matcher(value)
             if(matcher.matches()){
@@ -241,13 +271,12 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
                     result /= of(BigDecimal(denominator))
                 }
                 if(int != null) {
-                    val intValue = BigDecimal(int)
 
-                    if(intValue < BigDecimal.ZERO){
+                    if(int.startsWith('-')){
                         result = -result;
                     }
 
-                    result += of(intValue)
+                    result += of(BigInteger(int))
                 }
                 return result
             }
@@ -304,7 +333,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
     /**
      * Returns a string representation of this fraction with the specified number of maximum decimal places and the specified radix (default: 10).
      *
-     * Special values like Infinity or NaN are returned in the same way as [Double.toString]
+     * Special values like Infinity or NaN are returned in the same way as [Double].toString()
      */
     fun toString(n: Int, radix: Int = 10): String {
         if(radix < 2) throw IllegalArgumentException("radix")
