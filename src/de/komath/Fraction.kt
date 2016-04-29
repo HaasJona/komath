@@ -53,7 +53,7 @@ import java.util.regex.Pattern
  *
  * This is a data based, immutable and threadsafe class.
  */
-class Fraction private constructor(val numerator: BigInteger, val denominator: BigInteger) : Comparable<Fraction>, Number() {
+class Fraction internal constructor(val numerator: BigInteger, val denominator: BigInteger) : Number(), Comparable<Fraction> {
 
     companion object {
 
@@ -228,8 +228,6 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
         fun of(numerator: BigDecimal, denominator: BigDecimal) : Fraction = of(numerator) / of(denominator)
 
 
-        //val HEX_PATTERN = Pattern.compile("^\\s*(?:($INT) +)?($DEC)(\\s*/\\s*$DEC)\\s*$")
-
         val HEX_PATTERN_INLINE = Pattern.compile("^\\s*(?:([+-]?\\p{Digit}+) +)?([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?)(?:\\s*/\\s*([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?))?\\s*$")
 
         fun of(value: String) : Fraction {
@@ -243,7 +241,13 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
                     result /= of(BigDecimal(denominator))
                 }
                 if(int != null) {
-                    result += of(BigDecimal(int))
+                    val intValue = BigDecimal(int)
+
+                    if(intValue < BigDecimal.ZERO){
+                        result = -result;
+                    }
+
+                    result += of(intValue)
                 }
                 return result
             }
@@ -452,6 +456,35 @@ class Fraction private constructor(val numerator: BigInteger, val denominator: B
     operator fun component1() = numerator
 
     operator fun component2() = denominator
+
+    fun shiftLeft(shift: Int): Fraction {
+        if(denominator == BigInteger.ZERO) return this;
+        var nu = numerator;
+        var de = denominator;
+        if(shift > 0) {
+            val lsb = de.lowestSetBit
+            if(shift > lsb){
+                de = de.shiftRight(lsb)
+                nu = nu.shiftLeft(shift - lsb)
+            }
+            else {
+                de = de.shiftRight(shift)
+            }
+        }
+        else if (shift < 0) {
+            val lsb = nu.lowestSetBit
+            if(-shift > lsb){
+                nu = nu.shiftRight(lsb)
+                de = de.shiftLeft(-shift - lsb)
+            }
+            else {
+                nu = nu.shiftRight(-shift)
+            }
+        }
+        return Fraction(nu, de);
+    }
+
+    fun shiftRight(shift: Int) = shiftLeft(-shift)
 }
 
 /**
@@ -495,7 +528,7 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
         }
         builder.setLength(builder.length - 2)
         builder.append("]")
-        return builder.toString();
+        return builder.toString()
     }
 
     /**
@@ -519,12 +552,12 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
             curb = newb
             if (++i == n) break
         }
-        return Fraction.of(cura, curb);
+        return Fraction.of(cura, curb)
     }
 
     /**
      * Converts this continued fraction to a regular fraction and simplifies it as much as possible as long as the
-     * supplied condition is true. This method first generates more and more exact first order approximations until the
+     * supplied condition is true. This method generates more and more exact first order approximations until the
      * condition returns true. Generating second order approximations could in theory result in even simpler fractions,
      * but this causes some performance difficulties that haven't been solved yet. In the future this method may be changed to
      * (optionally) generate the best second order approximation.
@@ -540,30 +573,15 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
         for (bigInteger in this) {
             val newa = cura * bigInteger + olda
             val newb = curb * bigInteger + oldb
-
             if (condition(Fraction.of(newa, newb))) {
-//                var bTmp = bigInteger;
-//                var oldaX = newa
-//                var oldbX = newb
-//                while (true) {
-//                    // TBD Binary search here
-//                    bTmp -= BigInteger.ONE;
-//                    val newaX = cura * bTmp + olda
-//                    val newbX = curb * bTmp + oldb
-//                    if (!condition(Fraction.of(newaX, newbX))) {
-//                        return Fraction.of(oldaX, oldbX)
-//                    }
-//                    oldaX = newaX
-//                    oldbX = newbX
-//                }
-                return Fraction.of(newa, newb);
+                return Fraction.of(newa, newb)
             }
             olda = cura
             cura = newa
             oldb = curb
             curb = newb
         }
-        return Fraction.of(cura, curb);
+        return Fraction.of(cura, curb)
     }
 
     override fun compareTo(other: ContinuedFraction): Int {
@@ -573,6 +591,8 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
     fun toBigInteger() = toFraction().toBigInteger()
 
     fun toBigDecimal(scale: Int, roundingMode: RoundingMode) = toFraction().toBigDecimal(scale, roundingMode)
+
+    fun toBigDecimal(mathContext: MathContext) = toFraction().toBigDecimal(mathContext)
 
     override fun toByte(): Byte {
         return toFraction().toByte()
