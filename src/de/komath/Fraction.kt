@@ -674,7 +674,7 @@ private class ContinuedFractionIterator(fraction: Fraction) : Iterator<BigIntege
     }
 }
 
-class FpHelper(val significand: BigInteger, val exp: BigInteger){
+internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
 
     companion object{
         /**
