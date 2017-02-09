@@ -102,12 +102,12 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         /**
          * Returns a Fraction with the specified [numerator] and [denominator]. The given values may be normalized and reduced.
          */
-        fun of(numerator: Long = 1L, denominator: Long = 1L): Fraction = of(BigInteger.valueOf(numerator), BigInteger.valueOf(denominator))
+        fun of(numerator: Long, denominator: Long): Fraction = of(BigInteger.valueOf(numerator), BigInteger.valueOf(denominator))
 
         /**
          * Returns a Fraction with the specified [numerator] and [denominator]. The given values may be normalized and reduced.
          */
-        fun of(numerator: Int = 1, denominator: Int = 1): Fraction = of(numerator.toLong(), denominator.toLong())
+        fun of(numerator: Int, denominator: Int): Fraction = of(numerator.toLong(), denominator.toLong())
 
         /**
          * Returns a Fraction with the specified integer value. The [denominator] will always be 1.
@@ -144,6 +144,8 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         /**
          * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double (within double accuracy).
          *
+         * Note that "the simplest" is computed on a best effort basis without requiring excessive computation. The exact algorithm may change in the future.
+         * 
          * For example `Fraction.of(0.3) == 3/10`
          */
         fun of(value: Double): Fraction {
@@ -187,6 +189,8 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         /**
          * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float (within float accuracy).
          *
+         * Note that "the simplest" is computed on a best effort basis without requiring excessive computation. The exact algorithm may change in the future.
+         * 
          * For example `Fraction.of(0.3f) == 3/10`
          */
         fun of(value: Float): Fraction {
@@ -282,6 +286,34 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
             }
             return of(value.toDouble())
         }
+        
+        const val PATTERN = "([+-]?\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:\\((\\p{Digit}+)\\))?(?:[eE]([+-]?\\p{Digit}+))?"
+        
+        fun ofRepeatingString(value: String): Fraction {
+            val matcher = Pattern.compile(PATTERN).matcher(value)
+            if(matcher.matches()){
+                val decimal : String = matcher.group(1)
+                val repeating : String? = matcher.group(2)
+                val exponent : String? = matcher.group(3)
+                val bigDecimal = BigDecimal(decimal)
+                val tmp : Fraction
+                if(repeating != null) {
+                    val bigDecimalRepeating = BigDecimal(decimal + repeating).movePointRight(repeating.length)
+                    val foo = bigDecimalRepeating.minus(bigDecimal)
+                    tmp = of(foo) / of(BigDecimal.ONE.movePointRight(repeating.length) - BigDecimal.ONE)
+                }
+                else {
+                    tmp = of(bigDecimal)
+                }
+                
+                if(exponent != null){
+                    return tmp * of(BigDecimal.ONE.movePointRight(Integer.parseInt(exponent)))
+                }
+                
+                return tmp
+            }
+            throw IllegalArgumentException()
+        }
     }
 
     /**
@@ -299,11 +331,11 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      *
      * If the integer part (`a`) or the [denominator] would be zero, this returns the same String as [toString]
      */
-    fun toMixedString(): String {
+    fun toMixedString(radix: Int = 10): String {
         if(denominator == BigInteger.ZERO) return toString()
         val divideAndRemainder = numerator.divideAndRemainder(denominator)
         if(divideAndRemainder[0] == BigInteger.ZERO) return toString()
-        return "${divideAndRemainder[0]} ${divideAndRemainder[1].abs()}/${denominator}"
+        return "${divideAndRemainder[0].toString(radix)} ${divideAndRemainder[1].abs().toString(radix)}/${denominator.toString(radix)}"
     }
 
     /**
@@ -335,7 +367,75 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      *
      * Special values like Infinity or NaN are returned in the same way as [Double].toString()
      */
-    fun toString(n: Int, radix: Int = 10): String {
+    fun toString(n: Int, radix: Int = 10, roundingMode: RoundingMode = RoundingMode.DOWN): String {
+        if(radix < 2) throw IllegalArgumentException("radix")
+        if(denominator == BigInteger.ZERO){
+            if(numerator > BigInteger.ZERO){
+                return Double.POSITIVE_INFINITY.toString()
+            } else if(numerator < BigInteger.ZERO){
+                return Double.NEGATIVE_INFINITY.toString()
+            } else {
+                return Double.NaN.toString()
+            }
+        }
+        val radixBigInt = BigInteger.valueOf(radix.toLong())
+        var divideAndRemainder = numerator.divideAndRemainder(denominator)
+        if(n == 0) {
+            return round(divideAndRemainder[0], divideAndRemainder[1], roundingMode).toString(radix)
+        }
+        val s = StringBuilder()
+        s.append(divideAndRemainder[0].toString(radix))
+        var remainder = divideAndRemainder[1].abs()
+        if(remainder == BigInteger.ZERO) return s.toString()
+        s.append('.')
+        for(i in 1..n){
+            remainder *= radixBigInt
+            divideAndRemainder = remainder.divideAndRemainder(denominator)
+            remainder = divideAndRemainder[1]
+            if(i != n) {
+                s.append(divideAndRemainder[0].toString(radix))
+            }
+            else {
+                s.append(round(divideAndRemainder[0], divideAndRemainder[1], roundingMode).toString(radix))
+            }
+            if(remainder == BigInteger.ZERO) break
+        }
+        return s.toString()
+    }
+
+    private fun round(divide: BigInteger, remainder: BigInteger, roundingMode: RoundingMode): BigInteger {
+        var roundingModeInt = roundingMode;
+        if(roundingModeInt == RoundingMode.CEILING) {
+            roundingModeInt = if(numerator.signum() < 0) RoundingMode.DOWN else RoundingMode.UP;
+        }
+        else if(roundingModeInt == RoundingMode.FLOOR) {
+            roundingModeInt = if(numerator.signum() < 0) RoundingMode.UP else RoundingMode.DOWN;
+        } 
+        else if(roundingModeInt == RoundingMode.HALF_EVEN) {
+            roundingModeInt = if(divide.toInt() % 2 == 0) RoundingMode.HALF_DOWN else RoundingMode.HALF_UP;
+        }
+        return when(roundingModeInt){
+            RoundingMode.UP -> if(remainder > BigInteger.ZERO) divide.plus(BigInteger.ONE) else divide
+            RoundingMode.DOWN -> divide
+            RoundingMode.HALF_UP -> if(remainder.shiftLeft(1) >= denominator) divide.plus(BigInteger.ONE) else divide
+            RoundingMode.HALF_DOWN -> if(remainder.shiftLeft(1) > denominator) divide.plus(BigInteger.ONE) else divide
+            else -> if(remainder == BigInteger.ZERO) divide else throw ArithmeticException("rounding necessary")
+        }
+    }
+
+    /**
+     * Returns a repeating String representation of this fraction in the specified radix (default: 10).
+     * The repeating part (if any) will be enclosed in parens, for example `of("7/12").toRepeatingString() == "0.58(3)"` or `of("22/7").toRepeatingString() == "3.(142857)"`.
+     * 
+     * The integer part before the dot will never be included in the repeating portion of the String, for example `of(100,3).toRepeatingString(radix) == 33.(3)`.
+     *
+     * For large denominators, the resulting String can become very long and the computation can become very expensive. Because of that, a limit can be specified that limits the length
+     * of the fractional part to a specific count of digits. If this happens, there will be no parens in the resulting String, and it will instead end with "...". This limit can be disabled by
+     * using zero or a negative number for the limit.
+     * 
+     * Special values like Infinity or NaN are returned in the same way as [Double].toString()
+     */
+    fun toRepeatingString(radix: Int = 10, limit : Int = 255): String {
         if(radix < 2) throw IllegalArgumentException("radix")
         if(denominator == BigInteger.ZERO){
             if(numerator > BigInteger.ZERO){
@@ -349,9 +449,22 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         val radixBigInt = BigInteger.valueOf(radix.toLong())
         val s = StringBuilder()
         var divideAndRemainder = numerator.divideAndRemainder(denominator)
-        if(n > 0) s.append(divideAndRemainder[0].toString(radix)).append('.')
+        s.append(divideAndRemainder[0].toString(radix))
         var remainder = divideAndRemainder[1].abs()
-        for(i in 1..n){
+        if(remainder == BigInteger.ZERO) return s.toString()
+        s.append('.')
+        val remainders = mutableMapOf<BigInteger, Int>()
+        while (true){
+            val old = remainders.put(remainder, s.length)
+            if(old != null){
+                s.insert(old, "(")
+                s.append(")")
+                return s.toString()
+            }
+            if(limit > 0 && remainders.size > limit) {
+                s.append("...")
+                return s.toString()
+            }
             remainder *= radixBigInt
             divideAndRemainder = remainder.divideAndRemainder(denominator)
             remainder = divideAndRemainder[1]
@@ -410,44 +523,35 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
 
     operator fun div(other: Fraction) = of(numerator * other.denominator, denominator * other.numerator)
 
-    operator fun mod(other: Fraction) = other * (this / other).frac()
+    operator fun rem(other: Fraction) = other * (this / other).frac()
 
     operator fun unaryMinus(): Fraction = Fraction(-numerator, denominator)
 
     operator fun unaryPlus(): Fraction = this
-
+    
     override infix operator fun compareTo(other: Fraction): Int {
         return (numerator * other.denominator).compareTo(other.numerator * denominator)
     }
 
-    infix operator fun compareTo(other: BigInteger): Int {
-        return compareTo(of(other))
-    }
-
-    infix operator fun compareTo(other: Long): Int {
-        return compareTo(of(other))
-    }
-
-    infix operator fun compareTo(other: Int): Int {
-        return compareTo(of(other))
-    }
-
-    infix operator fun compareTo(other: Double): Int {
-        return compareTo(ofExact(other))
-    }
-
-    infix operator fun compareTo(other: Float): Int {
-        return compareTo(ofExact(other.toDouble()))
+    /**
+     * Returns the multiplicative inverse of this fraction.
+     * @return the reciprocal fraction
+     */
+    fun reciprocal(): Fraction {
+        if(numerator.signum() < 0){
+            return Fraction(-denominator, -numerator) 
+        }
+        return Fraction(denominator, numerator)
     }
 
     /**
      * Returns the fractional part of this fraction, which is this fraction with any integer part removed ("this modulo 1"). For example:
      *
-     * `frac(13/10) = frac(43/10) = 3/10`
+     * `frac(13/10) == frac(43/10) == 3/10`
      *
      * Negative fractions will return a negative fractional part, but otherwise work the same. For example:
      *
-     * `frac(-13/10) = frac(-43/10) = -3/10`
+     * `frac(-13/10) == frac(-43/10) == -3/10`
      *
      * The returned fraction is always between (exclusive) -1/1 and 1/1. If `this` is infinity or NaN, `this` is returned instead.
      */
@@ -782,26 +886,4 @@ internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
       return pDec.divide(qDec, 0, mode).toBigIntegerExact();
     }
 
-}
-
-
-// Extension functions for reverse operators
-infix operator fun BigInteger.compareTo(fraction: Fraction): Int {
-    return Fraction.of(this).compareTo(fraction);
-}
-
-infix operator fun Long.compareTo(fraction: Fraction): Int {
-    return Fraction.of(this).compareTo(fraction);
-}
-
-infix operator fun Int.compareTo(fraction: Fraction): Int {
-    return Fraction.of(this).compareTo(fraction);
-}
-
-infix operator fun Double.compareTo(fraction: Fraction): Int {
-    return Fraction.ofExact(this).compareTo(fraction);
-}
-
-infix operator fun Float.compareTo(fraction: Fraction): Int {
-    return Fraction.ofExact(this).compareTo(fraction);
 }
