@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/src/komath.iml" filepath="$PROJECT_DIR$/src/komath.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/komath.iml" filepath="$PROJECT_DIR$/.idea/modules/komath.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/komath_main.iml" filepath="$PROJECT_DIR$/.idea/modules/komath_main.iml" group="komath" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/komath_test.iml" filepath="$PROJECT_DIR$/.idea/modules/komath_test.iml" group="komath" />
     </modules>
   </component>
 </project>

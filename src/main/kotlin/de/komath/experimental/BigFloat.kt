@@ -1,5 +1,7 @@
-package de.komath
+package de.komath.experimental
 
+import de.komath.FpHelper
+import de.komath.Fraction
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.MathContext
@@ -8,24 +10,24 @@ import java.math.RoundingMode
 /**
  * Work in Progress
  */
-class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) : Comparable<BigFloat>, Number(){
+class BigFloat private constructor(val numerator: BigInteger, val denominator : BigInteger, val exp: BigInteger) : Comparable<BigFloat>, Number(){
 
     companion object {
 
         /**
          * Represents the value 0/0 (NaN)
          */
-        val NaN = BigFloat(Fraction.NaN, BigInteger.ZERO)
+        val NaN = BigFloat(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO)
 
         /**
          * Represents the value 0/1 (Zero)
          */
-        val ZERO = BigFloat(Fraction.ZERO, BigInteger.ZERO)
+        val ZERO = BigFloat(BigInteger.ZERO, BigInteger.ONE, BigInteger.ZERO)
 
         /**
          * Represents the value 1/1 (One)
          */
-        val ONE = BigFloat(Fraction.ONE, BigInteger.ZERO)
+        val ONE = BigFloat(BigInteger.ONE, BigInteger.ONE, BigInteger.ZERO)
 
         /**
          * Represents the value -1/1 (Negative One)
@@ -35,32 +37,34 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
         /**
          * Represents the value 1/0 (Positive Infinity)
          */
-        val POSITIVE_INFINITY = BigFloat(Fraction.POSITIVE_INFINITY, BigInteger.ZERO)
+        val POSITIVE_INFINITY = BigFloat(BigInteger.ONE, BigInteger.ZERO, BigInteger.ZERO)
 
         /**
          * Represents the value -1/0 (Negative Infinity)
          */
         val NEGATIVE_INFINITY = -POSITIVE_INFINITY
 
-        fun of(fraction: Fraction, exp: BigInteger): BigFloat {
-            if(fraction.denominator == BigInteger.ZERO){
-                if(fraction == Fraction.POSITIVE_INFINITY) return POSITIVE_INFINITY
-                if(fraction == Fraction.NEGATIVE_INFINITY) return NEGATIVE_INFINITY
+        fun of(numerator: BigInteger, denominator: BigInteger, exp: BigInteger): BigFloat {
+            if(denominator == BigInteger.ZERO){
+                val signum = numerator.signum()
+                if(signum > 0) return POSITIVE_INFINITY
+                if(signum < 0) return NEGATIVE_INFINITY
                 return NaN
             }
-            val numeratorShift = fraction.numerator.lowestSetBit
-            val denominatorShift = fraction.denominator.lowestSetBit
-            val exponentAdjustment = numeratorShift - denominatorShift
-            if(exponentAdjustment == 0) return BigFloat(fraction, exp)
-            if(numeratorShift > 0){
-                return BigFloat(Fraction(fraction.numerator.shiftRight(numeratorShift), fraction.denominator), exp + BigInteger.valueOf(numeratorShift.toLong()))
+            if(numerator == BigInteger.ZERO) return ZERO
+
+            var numeratorShift = numerator.lowestSetBit
+            var denominatorShift = denominator.lowestSetBit
+            if(numerator.bitLength() > 1024) {
+                numeratorShift += numerator.bitLength() - 1024;
             }
-            else {
-                return BigFloat(Fraction(fraction.numerator, fraction.denominator.shiftRight(denominatorShift)), exp - BigInteger.valueOf(denominatorShift.toLong()))
+            if(denominator.bitLength() > 1024) {
+                denominatorShift += denominator.bitLength() - 1024;
             }
+            return BigFloat(numerator.shiftRight(numeratorShift), denominator.shiftRight(denominatorShift), exp + BigInteger.valueOf(numeratorShift.toLong()) - BigInteger.valueOf(denominatorShift.toLong()))
         }
 
-        fun of(value: Fraction): BigFloat = of(value, BigInteger.ZERO)
+        fun of(value: Fraction): BigFloat = of(value.numerator, value.denominator, BigInteger.ZERO)
 
         fun of(value: BigInteger): BigFloat = of(Fraction.of(value))
 
@@ -81,7 +85,7 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
          */
         private fun ofExactNoSpecialValue(value: Double): BigFloat {
             val helper = FpHelper.ofDouble(value)
-            return of(Fraction.of(helper.significand), helper.exp)
+            return of(Fraction.of(helper.significand).numerator, Fraction.of(helper.significand).denominator, helper.exp)
         }
 
         /**
@@ -106,7 +110,7 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
          */
         private fun ofExactNoSpecialValue(value: Float): BigFloat {
             val helper = FpHelper.ofFloat(value)
-            return of(Fraction.of(helper.significand), helper.exp)
+            return of(Fraction.of(helper.significand).numerator, Fraction.of(helper.significand).denominator, helper.exp)
         }
 
         /**
@@ -129,8 +133,8 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
         if(this == NaN) return Double.NaN
         if(this == POSITIVE_INFINITY) return Double.POSITIVE_INFINITY
         if(this == NEGATIVE_INFINITY) return Double.NEGATIVE_INFINITY
-        val negExp = BigInteger.valueOf(fraction.denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(52)
-        val significand = fraction.numerator.shiftLeft(negExp.intValueExact()) / fraction.denominator
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(52)
+        val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, exp-negExp).toDouble()
     }
 
@@ -141,8 +145,8 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
         if(this == NaN) return Float.NaN
         if(this == POSITIVE_INFINITY) return Float.POSITIVE_INFINITY
         if(this == NEGATIVE_INFINITY) return Float.NEGATIVE_INFINITY
-        val negExp = BigInteger.valueOf(fraction.denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(23)
-        val significand = fraction.numerator.shiftLeft(negExp.intValueExact()) / fraction.denominator
+        val negExp = BigInteger.valueOf(denominator.bitLength().toLong()).shiftLeft(1) + BigInteger.valueOf(23)
+        val significand = numerator.shiftLeft(negExp.intValueExact()) / denominator
         return FpHelper(significand, exp-negExp).toFloat()
     }
 //
@@ -178,14 +182,14 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
 //    }
 
     /**
-     * Returns the BigInteger value (rounded towards zero) of this fraction. If the denominator is zero, returns zero.
+     * Returns the BigInteger value (rounded towards zero) of this  If the denominator is zero, returns zero.
      */
     fun toBigInteger(): BigInteger {
         if(exp.signum() >= 0) {
-            return fraction.numerator.shiftLeft(exp.intValueExact()).divide(fraction.denominator)
+            return numerator.shiftLeft(exp.intValueExact()).divide(denominator)
         }
         else {
-            return fraction.numerator.divide(fraction.denominator.shiftRight(exp.intValueExact()))
+            return numerator.divide(denominator.shiftRight(exp.intValueExact()))
         }
     }
 
@@ -197,10 +201,10 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
      */
     fun toBigDecimal(scale: Int, roundingMode: RoundingMode): BigDecimal {
         if(exp.signum() >= 0) {
-            return BigDecimal(fraction.numerator.shiftLeft(exp.intValueExact())).divide(BigDecimal(fraction.denominator), scale, roundingMode)
+            return BigDecimal(numerator.shiftLeft(exp.intValueExact())).divide(BigDecimal(denominator), scale, roundingMode)
         }
         else {
-            return BigDecimal(fraction.numerator).divide(BigDecimal(fraction.denominator.shiftRight(exp.intValueExact())), scale, roundingMode)
+            return BigDecimal(numerator).divide(BigDecimal(denominator.shiftRight(exp.intValueExact())), scale, roundingMode)
         }
     }
 
@@ -211,10 +215,10 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
      */
     fun toBigDecimal(mathContext: MathContext): BigDecimal {
         if(exp.signum() >= 0) {
-            return BigDecimal(fraction.numerator.shiftLeft(exp.intValueExact())).divide(BigDecimal(fraction.denominator), mathContext)
+            return BigDecimal(numerator.shiftLeft(exp.intValueExact())).divide(BigDecimal(denominator), mathContext)
         }
         else {
-            return BigDecimal(fraction.numerator).divide(BigDecimal(fraction.denominator.shiftRight(exp.intValueExact())), mathContext)
+            return BigDecimal(numerator).divide(BigDecimal(denominator.shiftRight(exp.intValueExact())), mathContext)
         }
     }
 
@@ -239,60 +243,60 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
      */
     override fun toByte() = toBigInteger().toByte()
 
-    operator fun plus(other: BigFloat) : BigFloat{
+    operator fun plus(other: BigFloat) : BigFloat {
+        var myNum = numerator;
+        var myDen = denominator;
+        val e : BigInteger;
         if(exp == other.exp){
-            return of(fraction + other.fraction, exp)
+            e = exp;
         }
-        if(exp > other.exp){
-            return of(fraction.shiftLeft((exp-other.exp).intValueExact()) + other.fraction, other.exp)
+        else if(exp > other.exp){
+            myNum = myNum.shiftLeft((exp-other.exp).intValueExact())
+            e = other.exp;
         }
         else {
-            return of(fraction + other.fraction.shiftLeft((other.exp-exp).intValueExact()), exp)
+            myDen = myDen.shiftRight((exp-other.exp).intValueExact())
+            e = exp
         }
+        return of(myNum * other.denominator + other.numerator * myDen, denominator * other.denominator, e)
     }
 
-    operator fun minus(other: BigFloat)  : BigFloat{
+    operator fun minus(other: BigFloat)  : BigFloat {
+        var myNum = numerator;
+        var myDen = denominator;
+        val e : BigInteger;
         if(exp == other.exp){
-            return of(fraction - other.fraction, exp)
+            e = exp;
         }
-        if(exp > other.exp){
-            return of(fraction.shiftLeft((exp-other.exp).intValueExact()) - other.fraction, other.exp)
+        else if(exp > other.exp){
+            myNum = myNum.shiftLeft((exp-other.exp).intValueExact())
+            e = other.exp;
         }
         else {
-            return of(fraction - other.fraction.shiftLeft((other.exp-exp).intValueExact()), exp)
+            myDen = myDen.shiftRight((exp-other.exp).intValueExact())
+            e = exp
         }
+        return of(myNum * other.denominator - other.numerator * myDen, denominator * other.denominator, e)
     }
 
-    operator fun times(other: BigFloat) = of(fraction * other.fraction, exp + other.exp)
+    operator fun times(other: BigFloat) = of(numerator * other.numerator, denominator * other.denominator, exp + other.exp)
 
-    operator fun div(other: BigFloat) = of(fraction / other.fraction, exp - other.exp)
+    operator fun div(other: BigFloat) = of(numerator * other.denominator, denominator * other.numerator, exp - other.exp)
 
-    operator fun mod(other: BigFloat) : BigFloat{
-        if(exp == other.exp){
-            return of(fraction % other.fraction, exp)
-        }
-        if(exp > other.exp){
-            return of(fraction.shiftLeft((exp-other.exp).intValueExact()) % other.fraction, other.exp)
-        }
-        else {
-            return of(fraction % other.fraction.shiftLeft((other.exp-exp).intValueExact()), exp)
-        }
+    operator fun mod(other: BigFloat) : BigFloat {
+        return of(toFraction() % other.toFraction())
     }
 
-    operator fun unaryMinus(): BigFloat = BigFloat(-fraction, exp)
+    fun toFraction(): Fraction {
+        return Fraction.of(numerator, denominator).shiftLeft(exp.intValueExact());
+    }
+
+    operator fun unaryMinus(): BigFloat = BigFloat(-numerator, denominator, exp)
 
     operator fun unaryPlus(): BigFloat = this
 
     override infix operator fun compareTo(other: BigFloat): Int {
-        if(exp == other.exp){
-            return fraction.compareTo(other.fraction)
-        }
-        if(exp > other.exp){
-            return fraction.shiftLeft((exp-other.exp).intValueExact()).compareTo(other.fraction)
-        }
-        else {
-            return fraction.compareTo(other.fraction.shiftLeft((other.exp-exp).intValueExact()))
-        }
+        return toFraction().compareTo(other.toFraction())
     }
 
     infix operator fun compareTo(other: BigInteger): Int {
@@ -308,16 +312,20 @@ class BigFloat private constructor(val fraction: Fraction, val exp: BigInteger) 
     }
 
     infix operator fun compareTo(other: Double): Int {
-        return compareTo(ofExact(other))
+        return toDouble().compareTo(other)
     }
 
     infix operator fun compareTo(other: Float): Int {
         return compareTo(ofExact(other.toDouble()))
     }
+
+    override fun toString(): String {
+        return toFraction().toBigDecimal(32, RoundingMode.DOWN).toString()
+    }
 }
 
 fun main(args: Array<String>) {
-    val ofExact = BigFloat.ofExact(Math.PI).times(BigFloat.of(64))
+    val ofExact = BigFloat.ofExact(Math.PI).times(BigFloat.of(64).div(BigFloat.ofExact(Math.PI)))
     println("ofExact = ${ofExact}")
     println("ofExact.toDouble() = ${ofExact.toDouble()}")
 }

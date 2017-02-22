@@ -51,6 +51,9 @@ import java.util.regex.Pattern
  * Unlike doubles, there is no distinction between positive zero and negative zero, because the fraction class can
  * represent arbitrarily small numbers and thus zero always represents exactly zero.
  *
+ * [NaN] represents and invalid value and is for example returned when dividing zero by zero or multiplying infinity with zero.
+ * Unless otherwise noted, all operations of this class with a NaN value as argument also return NaN.
+ *
  * This is a data based, immutable and threadsafe class.
  */
 class Fraction internal constructor(val numerator: BigInteger, val denominator: BigInteger) : Number(), Comparable<Fraction> {
@@ -231,8 +234,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
          */
         fun of(numerator: BigDecimal, denominator: BigDecimal) : Fraction = of(numerator) / of(denominator)
 
-
-        val HEX_PATTERN_INLINE = Pattern.compile("^\\s*(?:([+-]?\\p{Digit}+) +)?([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?)(?:\\s*/\\s*([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?))?\\s*$")
+        private val HEX_PATTERN_INLINE: Pattern = Pattern.compile("^\\s*(?:([+-]?\\p{Digit}+) +)?([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?)(?:\\s*/\\s*([+-]?(?:\\p{Digit}+(?:\\.\\p{Digit}*)?|\\.\\p{Digit})(?:[eE][+-]?\\p{Digit}+)?))?\\s*$")
 
         /**
          * Parses a String and returns the fractional value of this String. The string can
@@ -255,12 +257,12 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
          *
          * with sign(n) = -1 for n < 0, else 1
          *
-         * Note that this means that "-5 3/4" will result in a fraction with the value of `-4 - 3/5` (-23/5)
+         * Note that this means that "-4 3/5" will result in a fraction with the value of `-4 - 3/5` (-23/5)
          * (as expected) and that it is usually not useful to repeat the sign at the numerator or denominator when
          * creating a fraction using the mixed string representation. A [value] argument of "-4 -3/5" would actually
          * result in a [Fraction] with a value of `-4 + 3/5` (-17/5).
          *
-         * Note that this also means, that you can use decimals as [numerator] and [denominator] here.
+         * Note that this also means, that you can use decimals as [numerator] and [denominator].
          * For example `Fraction.of("12.5/0.1")` would result in a [Fraction] with the value of 125/1.
          *
          */
@@ -363,7 +365,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
     }
 
     /**
-     * Returns a string representation of this fraction with the specified number of maximum decimal places and the specified radix (default: 10).
+     * Returns a (decimal) string representation of this fraction with the specified number of maximum decimal places and the specified radix (default: 10).
      *
      * Special values like Infinity or NaN are returned in the same way as [Double].toString()
      */
@@ -404,24 +406,24 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
     }
 
     private fun round(divide: BigInteger, remainder: BigInteger, roundingMode: RoundingMode): BigInteger {
-        var roundingModeInt = roundingMode;
-        if(roundingModeInt == RoundingMode.CEILING) {
-            roundingModeInt = if(numerator.signum() < 0) RoundingMode.DOWN else RoundingMode.UP;
-        }
-        else if(roundingModeInt == RoundingMode.FLOOR) {
-            roundingModeInt = if(numerator.signum() < 0) RoundingMode.UP else RoundingMode.DOWN;
-        } 
-        else if(roundingModeInt == RoundingMode.HALF_EVEN) {
-            roundingModeInt = if(divide.toInt() % 2 == 0) RoundingMode.HALF_DOWN else RoundingMode.HALF_UP;
+
+        fun roundUp(divide: BigInteger) = if (divide.signum() >= 0) divide + BigInteger.ONE else divide - BigInteger.ONE
+
+        val roundingModeInt = when (roundingMode) {
+            RoundingMode.CEILING -> if(numerator.signum() < 0) RoundingMode.DOWN else RoundingMode.UP
+            RoundingMode.FLOOR -> if(numerator.signum() < 0) RoundingMode.UP else RoundingMode.DOWN
+            RoundingMode.HALF_EVEN -> if(divide.toInt() % 2 == 0) RoundingMode.HALF_DOWN else RoundingMode.HALF_UP
+            else -> roundingMode
         }
         return when(roundingModeInt){
-            RoundingMode.UP -> if(remainder > BigInteger.ZERO) divide.plus(BigInteger.ONE) else divide
+            RoundingMode.UP -> if(remainder != BigInteger.ZERO) roundUp(divide) else divide
             RoundingMode.DOWN -> divide
-            RoundingMode.HALF_UP -> if(remainder.shiftLeft(1) >= denominator) divide.plus(BigInteger.ONE) else divide
-            RoundingMode.HALF_DOWN -> if(remainder.shiftLeft(1) > denominator) divide.plus(BigInteger.ONE) else divide
+            RoundingMode.HALF_UP -> if(remainder.abs().shiftLeft(1) >= denominator) roundUp(divide) else divide
+            RoundingMode.HALF_DOWN -> if(remainder.abs().shiftLeft(1) > denominator) roundUp(divide) else divide
             else -> if(remainder == BigInteger.ZERO) divide else throw ArithmeticException("rounding necessary")
         }
     }
+
 
     /**
      * Returns a repeating String representation of this fraction in the specified radix (default: 10).
@@ -477,7 +479,15 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
     /**
      * Returns the BigInteger value (rounded towards zero) of this fraction. If the denominator is zero, returns zero.
      */
-    fun toBigInteger() = if(denominator == BigInteger.ZERO) BigInteger.ZERO else numerator / denominator
+    fun toBigInteger(): BigInteger = if(denominator == BigInteger.ZERO) BigInteger.ZERO else numerator / denominator
+
+    /**
+     * Returns the BigInteger value (rounded with the specified [roundingmode]) of this fraction. If the denominator is zero, returns zero.
+     */
+    fun toBigInteger(roundingMode: RoundingMode): BigInteger {
+        val divideAndRemainder = numerator.divideAndRemainder(denominator)
+        return round(divideAndRemainder[0], divideAndRemainder[1], roundingMode)
+    }
 
     /**
      * Returns this as a BigDecimal
@@ -485,14 +495,14 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      * @param  roundingMode rounding mode to apply.
      * @throws ArithmeticException if denominator is zero
      */
-    fun toBigDecimal(scale: Int, roundingMode: RoundingMode) = BigDecimal(numerator).divide(BigDecimal(denominator), scale, roundingMode)
+    fun toBigDecimal(scale: Int, roundingMode: RoundingMode): BigDecimal = BigDecimal(numerator).divide(BigDecimal(denominator), scale, roundingMode)
 
     /**
      * Returns this as a BigDecimal
      * @param  mathContext the [MathContext] to use for rounding and accuracy
      * @throws ArithmeticException if denominator is zero
      */
-    fun toBigDecimal(mathContext: MathContext) = BigDecimal(numerator).divide(BigDecimal(denominator), mathContext)
+    fun toBigDecimal(mathContext: MathContext): BigDecimal = BigDecimal(numerator).divide(BigDecimal(denominator), mathContext)
 
     /**
      * Returns `toBigInteger().toLong()`. If the denominator is zero, returns zero.
@@ -515,6 +525,14 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      */
     override fun toByte() = toBigInteger().toByte()
 
+    fun toLongExact(roundingMode: RoundingMode) = toBigInteger(roundingMode).longValueExact()
+
+    fun toIntExact(roundingMode: RoundingMode) = toBigInteger(roundingMode).intValueExact()
+
+    fun toShortExact(roundingMode: RoundingMode) = toBigInteger(roundingMode).shortValueExact()
+
+    fun toByteExact(roundingMode: RoundingMode) = toBigInteger(roundingMode).byteValueExact()
+
     operator fun plus(other: Fraction) = of(numerator * other.denominator + other.numerator * denominator, denominator * other.denominator)
 
     operator fun minus(other: Fraction) = of(numerator * other.denominator - other.numerator * denominator, denominator * other.denominator)
@@ -535,6 +553,11 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
 
     /**
      * Returns the multiplicative inverse of this fraction.
+     *
+     * * If this is [NaN], return [NaN].
+     * * If this is an infinity, returns [ZERO].
+     * * If this is [ZERO], returns [POSITIVE_INFINITY]
+     *
      * @return the reciprocal fraction
      */
     fun reciprocal(): Fraction {
@@ -553,12 +576,21 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      *
      * `frac(-13/10) == frac(-43/10) == -3/10`
      *
-     * The returned fraction is always between (exclusive) -1/1 and 1/1. If `this` is infinity or NaN, `this` is returned instead.
+     * The returned fraction is always between (exclusive) -1/1 and 1/1. As an exception, if `this` is infinity or NaN, `this` is returned instead.
      */
     fun frac(): Fraction {
         if (denominator == BigInteger.ZERO) return this
         return Fraction(numerator % denominator, denominator)
     }
+
+    /**
+     * Returns the signum of the fraction:
+     *
+     * * 1 if the fraction is positive
+     * * -1 if the fraction is negative
+     * * 0 if the fraction is [ZERO] or [NaN]
+     */
+    fun signum() = numerator.signum()
 
     /**
      * Converts this fraction into a continued fraction representation.
@@ -574,10 +606,8 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
 
-        return equals(other as Fraction)
-    }
+        other as Fraction
 
-    fun equals(other: Fraction): Boolean {
         if (denominator != other.denominator) return false
         if (numerator != other.numerator) return false
 
@@ -590,6 +620,9 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
 
     operator fun component2() = denominator
 
+    /**
+     * Multiplies this fraction by 2 to the power of [shift] as if the number were shifted left in a binary representation and returns the resulting fraction.
+     */
     fun shiftLeft(shift: Int): Fraction {
         if(denominator == BigInteger.ZERO) return this;
         var nu = numerator;
@@ -617,6 +650,9 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         return Fraction(nu, de);
     }
 
+    /**
+     * Divides this fraction by 2 to the power of [shift] as if the number were shifted right in a binary representation and returns the resulting fraction.
+     */
     fun shiftRight(shift: Int) = shiftLeft(-shift)
 }
 
@@ -721,11 +757,11 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
         return toFraction().compareTo(other.toFraction());
     }
 
-    fun toBigInteger() = toFraction().toBigInteger()
+    fun toBigInteger(): BigInteger = toFraction().toBigInteger()
 
-    fun toBigDecimal(scale: Int, roundingMode: RoundingMode) = toFraction().toBigDecimal(scale, roundingMode)
+    fun toBigDecimal(scale: Int, roundingMode: RoundingMode): BigDecimal = toFraction().toBigDecimal(scale, roundingMode)
 
-    fun toBigDecimal(mathContext: MathContext) = toFraction().toBigDecimal(mathContext)
+    fun toBigDecimal(mathContext: MathContext): BigDecimal = toFraction().toBigDecimal(mathContext)
 
     override fun toByte(): Byte {
         return toFraction().toByte()
