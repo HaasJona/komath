@@ -51,7 +51,7 @@ import java.util.regex.Pattern
  * Unlike doubles, there is no distinction between positive zero and negative zero, because the fraction class can
  * represent arbitrarily small numbers and thus zero always represents exactly zero.
  *
- * [NaN] represents and invalid value and is for example returned when dividing zero by zero or multiplying infinity with zero.
+ * [NaN] represents an invalid value and is for example returned when dividing zero by zero or multiplying infinity with zero.
  * Unless otherwise noted, all operations of this class with a NaN value as argument also return NaN.
  *
  * This is a data based, immutable and threadsafe class.
@@ -147,7 +147,8 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
         /**
          * Returns the simplest fraction, whose [double value][toDouble] is equal to the specified double (within double accuracy).
          *
-         * Note that "the simplest" is computed on a best effort basis without requiring excessive computation. The exact algorithm may change in the future.
+         * Note that "the simplest" is computed on a best effort basis without requiring excessive computation. The exact algorithm may change in the future. 
+         * The only guarantee is, that the Fraction converted back into a double will be equal to the specified double.
          * 
          * For example `Fraction.of(0.3) == 3/10`
          */
@@ -193,6 +194,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
          * Returns the simplest fraction, whose [float value][toFloat] is equal to the specified float (within float accuracy).
          *
          * Note that "the simplest" is computed on a best effort basis without requiring excessive computation. The exact algorithm may change in the future.
+         * The only guarantee is, that the Fraction converted back into a float will be equal to the specified float.
          * 
          * For example `Fraction.of(0.3f) == 3/10`
          */
@@ -279,7 +281,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
                 if(int != null) {
 
                     if(int.startsWith('-')){
-                        result = -result;
+                        result = -result
                     }
 
                     result += of(BigInteger(int))
@@ -568,7 +570,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
     }
 
     /**
-     * Returns the fractional part of this fraction, which is this fraction with any integer part removed ("this modulo 1"). For example:
+     * Returns the fractional part of this fraction, which is this fraction with any integer part removed (`this % 1`). For example:
      *
      * `frac(13/10) == frac(43/10) == 3/10`
      *
@@ -598,18 +600,16 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      * @throws ArithmeticException if the denominator is zero (`this` is Infinity or NaN)
      */
     fun continuedFraction(): ContinuedFraction {
-        if(denominator == BigInteger.ZERO) throw ArithmeticException(toString(0));
+        if(denominator == BigInteger.ZERO) throw ArithmeticException(toString(0))
         return ContinuedFraction.of(this)
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other?.javaClass != javaClass) return false
+        if (other !is Fraction) return false
 
-        other as Fraction
-
-        if (denominator != other.denominator) return false
         if (numerator != other.numerator) return false
+        if (denominator != other.denominator) return false
 
         return true
     }
@@ -624,9 +624,9 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
      * Multiplies this fraction by 2 to the power of [shift] as if the number were shifted left in a binary representation and returns the resulting fraction.
      */
     fun shiftLeft(shift: Int): Fraction {
-        if(denominator == BigInteger.ZERO) return this;
-        var nu = numerator;
-        var de = denominator;
+        if(denominator == BigInteger.ZERO) return this
+        var nu = numerator
+        var de = denominator
         if(shift > 0) {
             val lsb = de.lowestSetBit
             if(shift > lsb){
@@ -647,7 +647,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
                 nu = nu.shiftRight(-shift)
             }
         }
-        return Fraction(nu, de);
+        return Fraction(nu, de)
     }
 
     /**
@@ -685,11 +685,11 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
 
     override fun toString(): String {
         val builder = StringBuilder("[")
-        var n = 0;
+        var n = 0
         for (bigInteger in this) {
             builder.append(bigInteger)
             builder.append(if (n == 0) "; " else ", ")
-            n++;
+            n++
             if (n > 10) {
                 builder.append("...  ")
                 break
@@ -754,7 +754,7 @@ class ContinuedFraction private constructor(private val arg: Iterable<BigInteger
     }
 
     override fun compareTo(other: ContinuedFraction): Int {
-        return toFraction().compareTo(other.toFraction());
+        return toFraction().compareTo(other.toFraction())
     }
 
     fun toBigInteger(): BigInteger = toFraction().toBigInteger()
@@ -847,21 +847,21 @@ internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
     fun toDouble(): Double {
         var mantissa = significand.abs()
         val bitLength = mantissa.bitLength()
-        var e = exp;
-        e += BigInteger.valueOf((bitLength - 53).toLong());
+        var e = exp
+        e += BigInteger.valueOf((bitLength - 53).toLong())
         if(bitLength > 52)
             mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 53), RoundingMode.HALF_EVEN)
         else
             mantissa = mantissa.shiftRight(bitLength - 53)
-        e += BigInteger.valueOf(1075);
+        e += BigInteger.valueOf(1075)
         if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
         if (e < BigInteger.ZERO) {
             try {
-                mantissa = mantissa.shiftRight(1 - (e.intValueExact()));
+                mantissa = mantissa.shiftRight(1 - (e.intValueExact()))
             } catch (e: ArithmeticException) {
-                mantissa = BigInteger.ZERO;
+                mantissa = BigInteger.ZERO
             }
-            e = BigInteger.ZERO;
+            e = BigInteger.ZERO
         }
         var intExp = try {
             e.intValueExact()
@@ -870,12 +870,12 @@ internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
         }
         if (intExp > 2046) {
             // Inf
-            intExp = 2047;
-            mantissa = BigInteger.ZERO;
+            intExp = 2047
+            mantissa = BigInteger.ZERO
         }
         var doubleBits: Long = (mantissa.longValueExact() and 0x000fffffffffffffL) or (intExp.toLong().shl(52))
         if (significand.signum() < 0) {
-            doubleBits = doubleBits or 1L.shl(63);
+            doubleBits = doubleBits or 1L.shl(63)
         }
         return java.lang.Double.longBitsToDouble(doubleBits)
     }
@@ -883,21 +883,21 @@ internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
     fun toFloat(): Float {
         var mantissa = significand.abs()
         val bitLength = mantissa.bitLength()
-        var e = exp;
-        e += BigInteger.valueOf((bitLength - 24).toLong());
+        var e = exp
+        e += BigInteger.valueOf((bitLength - 24).toLong())
         if(bitLength > 23)
             mantissa = divide(mantissa, BigInteger.ZERO.setBit(bitLength - 24), RoundingMode.HALF_EVEN)
         else
             mantissa = mantissa.shiftRight(bitLength - 24)
-        e += BigInteger.valueOf(150);
+        e += BigInteger.valueOf(150)
         if (mantissa == BigInteger.ZERO) e = BigInteger.ZERO
         if (e < BigInteger.ZERO) {
             try {
-                mantissa = mantissa.shiftRight(1 - (e.intValueExact()));
+                mantissa = mantissa.shiftRight(1 - (e.intValueExact()))
             } catch (e: ArithmeticException) {
-                mantissa = BigInteger.ZERO;
+                mantissa = BigInteger.ZERO
             }
-            e = BigInteger.ZERO;
+            e = BigInteger.ZERO
         }
         var intExp = try {
             e.intValueExact()
@@ -906,20 +906,20 @@ internal class FpHelper(val significand: BigInteger, val exp: BigInteger){
         }
         if (intExp > 254) {
             // Inf
-            intExp = 255;
-            mantissa = BigInteger.ZERO;
+            intExp = 255
+            mantissa = BigInteger.ZERO
         }
         var intBits: Int = (mantissa.intValueExact() and 0x007fffff) or (intExp.shl(23))
         if (significand.signum() < 0) {
-            intBits = intBits or 1.shl(31);
+            intBits = intBits or 1.shl(31)
         }
         return java.lang.Float.intBitsToFloat(intBits)
     }
 
     fun divide(p: BigInteger, q: BigInteger , mode : RoundingMode) : BigInteger {
-      val pDec = BigDecimal(p);
-      val qDec = BigDecimal(q);
-      return pDec.divide(qDec, 0, mode).toBigIntegerExact();
+      val pDec = BigDecimal(p)
+        val qDec = BigDecimal(q)
+        return pDec.divide(qDec, 0, mode).toBigIntegerExact()
     }
 
 }
