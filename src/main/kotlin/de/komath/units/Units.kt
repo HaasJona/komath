@@ -7,8 +7,11 @@ import java.text.NumberFormat
 
 
 // Derived Units
+object Radian : AbstractUnit(), BaseUnit by Unity.rename("rad", "Radian", false, false)
+object Steradian : AbstractUnit(), BaseUnit by Unity.rename("sr", "Steradian", false, false)
 object Hertz : AbstractUnit(), BaseUnit by Second.pow(-1).rename("Hz", "Hertz", true, true)
 object Newton : AbstractUnit(), BaseUnit by Meter.times(Kilogram).times(Second.pow(-2)).rename("N", "Newton", true, true)
+object Pascal : AbstractUnit(), BaseUnit by (Newton / Meter / Meter).rename("Pa", "Pascal", true, true)
 object Joule : AbstractUnit(), BaseUnit by Newton.times(Meter).rename("J", "Joule", true, true)
 object Watt : AbstractUnit(), BaseUnit by Joule.times(Second.pow(-1)).rename("W", "Watt", true, true)
 object Coulomb : AbstractUnit(), BaseUnit by Second.times(Ampere).rename("C", "Coulomb", true, true)
@@ -19,6 +22,12 @@ object Siemens : AbstractUnit(), BaseUnit by Ohm.pow(-1).rename("S", "Siemens", 
 object Weber : AbstractUnit(), BaseUnit by Joule.times(Ampere.pow(-1)).rename("Wb", "Weber", true, true)
 object Tesla : AbstractUnit(), BaseUnit by Weber.times(Meter.pow(-2)).rename("T", "Tesla", true, true)
 object Henry : AbstractUnit(), BaseUnit by Weber.times(Ampere.pow(-1)).rename("H", "Henry", true, true)
+object Lumen : AbstractUnit(), BaseUnit by (Candela * Steradian).rename("lm", "Lumen", true, true)
+object Lux : AbstractUnit(), BaseUnit by (Lumen / Meter / Meter).rename("lx", "Lux", true, true)
+object Becquerel : AbstractUnit(), BaseUnit by Hertz.rename("Bq", "Becquerel", true, true)
+object Gray : AbstractUnit(), BaseUnit by (Joule / Kilogram).rename("Gy", "Gray", true, true)
+object Sievert : AbstractUnit(), BaseUnit by (Joule / Kilogram).rename("Sv", "Sievert", true, true)
+object Katal : AbstractUnit(), BaseUnit by (Mole / Second).rename("kat", "Katal", true, true)
 
 // Common units
 object Centimeter : AbstractUnit(), BaseUnit by Meter * 0.01
@@ -42,6 +51,128 @@ object CubicMeter : AbstractUnit(), DerivedUnit by Meter.pow(3)
 object Liter : AbstractUnit(), BaseUnit by CubicMeter.times(0.001, "l", "Liter", false, true)
 object Hectare : AbstractUnit(), BaseUnit by SquareMeter.times(10000.0, "ha", "Hectare", false, false)
 
+
+//Factors
+
+object Deca {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 10.0
+    }
+}
+
+object Hecto {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 100.0
+    }
+}
+
+object Kilo {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000.0
+    }
+}
+
+object Mega {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000.0
+    }
+}
+
+object Giga {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000.0
+    }
+}
+
+object Tera {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000000.0
+    }
+}
+
+object Peta {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000000000.0
+    }
+}
+
+object Exa {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000000000000.0
+    }
+}
+
+object Zetta {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000000000000000.0
+    }
+}
+
+object Yotta {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * 1000000000000000000000000.0
+    }
+}
+
+object Deci {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .1
+    }
+}
+
+object Centi {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .01
+    }
+}
+
+object Milli {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .001
+    }
+}
+
+object Micro {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000001
+    }
+}
+
+object Nano {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000001
+    }
+}
+
+object Pico {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000000001
+    }
+}
+
+object Femto {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000000000001
+    }
+}
+
+object Atto {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000000000000001
+    }
+}
+
+object Zepto {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000000000000000001
+    }
+}
+
+object Yocto {
+    operator fun invoke(unit : BaseUnit) : BaseUnit {
+        return unit * .000000000000000000000001
+    }
+}
 
 interface DerivedUnit {
     val symbol : String   
@@ -160,13 +291,15 @@ object Unity : AbstractUnit() {
     }
 
     override val symbol: String get() = ""
-    override val formatter = UnityFormatter
-    override val baseComponents = ImmutableMap.of<BaseUnit, Int>()
+    
+    override val formatter: UnitFormatter get() = UnityFormatter
+    
+    override val baseComponents: Map<BaseUnit, Int> get() = ImmutableMap.of<BaseUnit, Int>()
 }
 
 val One: Amount<Unity> = Amount(1.0, Unity)
 
-object UnityFormatter : UnitFormatter {
+private object UnityFormatter : UnitFormatter {
     override fun format(value: Double) : String {
         if (!value.isFinite()) return value.toString()
         return FORMAT.get().format(value)
@@ -190,7 +323,7 @@ class FactorUnit(val unit: DerivedUnit, val factor: Double, override val symbol:
     }
 
     override fun toString(): String {
-        return formatter.factorName(factor)
+        return name
     }
 
     override val formatter = SiFormatter(symbol, name,1.0, positivePrefixes, negativePrefixes, 1)
@@ -216,7 +349,7 @@ class BaseFactorUnit(val unit: BaseUnit, val factor: Double) : AbstractUnit(), B
         return unit.factorSymbol(this.factor * factor)
     }
 
-    override fun toString() = unit.factorName(this.factor * factor)
+    override fun toString() = unit.factorName(this.factor)
 
     override fun factorName(factor: Double): String {
         return unit.factorName(this.factor * factor)

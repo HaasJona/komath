@@ -98,7 +98,31 @@ class SiFormatter(val symbol: String, val name: String, val multiplication: Doub
     }
 
     fun factorName(factor: Double): String {
-        return name
+        return when(factor * multiplication) {
+            1.0 -> name
+            10.0 -> "Deca$name".toLowerCase().capitalize()
+            100.0 -> "Hecto$name".toLowerCase().capitalize()
+            1000.0 -> "Kilo$name".toLowerCase().capitalize()
+            1000000.0 -> "Mega$name".toLowerCase().capitalize()
+            1000000000.0 -> "Giga$name".toLowerCase().capitalize()
+            1000000000000.0 -> "Tera$name".toLowerCase().capitalize()
+            1000000000000000.0 -> "Peta$name".toLowerCase().capitalize()
+            1000000000000000000.0 -> "Exa$name".toLowerCase().capitalize()
+            1000000000000000000000.0 -> "Zetta$name".toLowerCase().capitalize()
+            1000000000000000000000000.0 -> "Yotta$name".toLowerCase().capitalize()
+            .1 -> "Deci$name".toLowerCase().capitalize()
+            .01 -> "Centi$name".toLowerCase().capitalize()
+            .001 -> "Milli$name".toLowerCase().capitalize()
+            .000001 -> "Micro$name".toLowerCase().capitalize()
+            .000000001 -> "Nano$name".toLowerCase().capitalize()
+            .000000000001 -> "Pico$name".toLowerCase().capitalize()
+            .000000000000001 -> "Femto$name".toLowerCase().capitalize()
+            .000000000000000001 -> "Atto$name".toLowerCase().capitalize()
+            .000000000000000000001 -> "Zepto$name".toLowerCase().capitalize()
+            .000000000000000000000001 -> "Yocto$name".toLowerCase().capitalize()
+            else -> "$factor·$name"
+        }
+        
     }
 }
 

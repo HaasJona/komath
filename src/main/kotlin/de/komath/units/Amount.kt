@@ -1,5 +1,7 @@
 package de.komath.units
 
+import com.google.common.collect.ForwardingObject
+import com.google.common.collect.Interner
 import java.time.Duration
 
 /**
@@ -113,12 +115,14 @@ fun main(args: Array<String>) {
     
     println (500 * Watt * Second to Joule)
     
-    println (50 * Meter * Meter to Hectare)
+    println (50 * SquareMeter to Hectare)
     
-}
-
-object Kilo {
-    operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000.0
-    }
+    println(Kilo(Gram) == Kilogram)
+    
+    println(Kilo(Gram))
+    
+    println(10 * Milli(Tonne) to MilliGram)
+    
+    println(Yocto(Meter) * Tonne)
+    
 }
