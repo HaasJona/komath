@@ -21,6 +21,7 @@ object Tesla : AbstractUnit(), BaseUnit by Weber.times(Meter.pow(-2)).rename("T"
 object Henry : AbstractUnit(), BaseUnit by Weber.times(Ampere.pow(-1)).rename("H", "Henry", true, true)
 
 // Common units
+object Kilometer : AbstractUnit(), BaseUnit by Meter * 1000.0
 object Centimeter : AbstractUnit(), BaseUnit by Meter * 0.01
 object Millimeter : AbstractUnit(), BaseUnit by Meter * 0.001
 object Micrometer : AbstractUnit(), BaseUnit by Meter * 0.000001

@@ -3,12 +3,6 @@ package de.komath.units
 import com.google.common.collect.ImmutableMap
 import java.lang.Math.abs
 
-/**
- * TBD Dokumentation
- *
- * @author Kappich Systemberatung
- */
-
 object Meter:SiUnit("m", "Meter", 6, SiFormatter("m", "Meter", 1.0, true, true, 1))
 object Kilogram :SiUnit("kg", "Kilogram", 5, SiFormatter("g", "Gram", 1000.0, true, true, 1))
 object Second :SiUnit("s", "Second", 7, SiFormatter("s", "Second", 1.0, false, true, 1))
