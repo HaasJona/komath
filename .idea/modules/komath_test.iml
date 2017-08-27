@@ -5,6 +5,7 @@
       <configuration version="3" platform="JVM 1.6" useProjectSettings="false">
         <compilerSettings />
         <compilerArguments>
+          <option name="destination" value="$MODULE_DIR$/../../build/kotlin-classes/test" />
           <option name="noStdlib" value="true" />
           <option name="noReflect" value="true" />
           <option name="moduleName" value="komath_main" />
@@ -18,7 +19,6 @@
           <option name="pluginClasspaths">
             <array />
           </option>
-          <option name="version" value="true" />
         </compilerArguments>
       </configuration>
     </facet>

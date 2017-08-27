@@ -40,8 +40,8 @@ sealed class SiUnit(override val symbol: String, val fullname: String, override 
 
 class SiFormatter(val symbol: String, val name: String, val multiplication: Double, val positivePrefixes: Boolean, val negativePrefixes: Boolean, private val pow: Int) : BaseUnitFormatter {
 
-    override fun power(pow: Int) : SiFormatter {
-        return SiFormatter(symbol, name, Math.pow(multiplication, pow.toDouble()), positivePrefixes, negativePrefixes, this.pow * pow)
+    override fun power(power: Int) : SiFormatter {
+        return SiFormatter(symbol, name, Math.pow(multiplication, power.toDouble()), positivePrefixes, negativePrefixes, this.pow * power)
     }    
     
     override fun format(value: Double): String {

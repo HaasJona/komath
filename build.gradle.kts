@@ -1,15 +1,5 @@
-buildscript {
-
-    repositories {
-        gradleScriptKotlin()
-    }
-
-    dependencies {
-        classpath(kotlinModule("gradle-plugin"))
-    }
-}
-
 plugins {
+    kotlin("jvm", "1.1.4-2")
 }
 
 apply {
@@ -17,11 +7,11 @@ apply {
 }
 
 repositories {
-    gradleScriptKotlin()
+    jcenter()
 }
 
 dependencies {
-    compile(kotlinModule("stdlib", "1.1.4"))
-    compile(group="com.google.guava", name="guava",version="22.0")
+    compile(kotlin("stdlib", "1.1.4-2"))
+    compile(group="com.google.guava", name="guava", version="22.0")
     testCompile("junit:junit:4.12")
 }
