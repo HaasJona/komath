@@ -30,6 +30,7 @@ object Sievert : AbstractUnit(), BaseUnit by (Joule / Kilogram).rename("Sv", "Si
 object Katal : AbstractUnit(), BaseUnit by (Mole / Second).rename("kat", "Katal", true, true)
 
 // Common units
+object Kilometer : AbstractUnit(), BaseUnit by Meter * 1000.0
 object Centimeter : AbstractUnit(), BaseUnit by Meter * 0.01
 object Millimeter : AbstractUnit(), BaseUnit by Meter * 0.001
 object Micrometer : AbstractUnit(), BaseUnit by Meter * 0.000001

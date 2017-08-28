@@ -4,11 +4,6 @@ import com.google.common.collect.ForwardingObject
 import com.google.common.collect.Interner
 import java.time.Duration
 
-/**
- * TBD Dokumentation
- *
- * @author Kappich Systemberatung
- */
 class Amount<U : DerivedUnit>(val value: Double, val unit : U) {
 
     operator fun plus(other : Amount<U>) : Amount<U> {

@@ -11,8 +11,6 @@ interface BaseUnitFormatter : UnitFormatter {
 
 }
 
-
-
 fun appendUnit(stringBuilder: StringBuilder, unit: String, power: Int, powerMultiplier: Int, positivePrefixes: Boolean, negativePrefixes: Boolean) {
     appendUnit(powerMultiplier, stringBuilder, power, positivePrefixes, negativePrefixes)
     stringBuilder.append(unit)
