@@ -44,9 +44,11 @@ object Millisecond : AbstractUnit(), BaseUnit by Second * 0.001
 object Microsecond : AbstractUnit(), BaseUnit by Second * 0.000001
 object Nanosecond : AbstractUnit(), BaseUnit by Second * 0.000000001
 object Gram : AbstractUnit(), BaseUnit by Kilogram * 0.001
-object MilliGram : AbstractUnit(), BaseUnit by Kilogram * 0.000001
-object MicroGram : AbstractUnit(), BaseUnit by Kilogram * 0.000000001
-object NanoGram : AbstractUnit(), BaseUnit by Kilogram * 0.000000000001
+object Milligram : AbstractUnit(), BaseUnit by Kilogram * 0.000001
+object Microgram : AbstractUnit(), BaseUnit by Kilogram * 0.000000001
+object Nanogram : AbstractUnit(), BaseUnit by Kilogram * 0.000000000001
+object Dalton : AbstractUnit(), BaseUnit by Kilogram.times(1.660_539_040_20e-27, "Da", "Dalton", false, false)
+object UnifiedAtomicMassUnit : AbstractUnit(), BaseUnit by Kilogram.times(1.660_539_040_20e-27, "u", "Unified Atomic Mass Unit", false, false)
 object SquareMeter : AbstractUnit(), DerivedUnit by Meter.pow(2)
 object CubicMeter : AbstractUnit(), DerivedUnit by Meter.pow(3)
 object Liter : AbstractUnit(), BaseUnit by CubicMeter.times(0.001, "l", "Liter", false, true)
@@ -69,49 +71,49 @@ object Hecto {
 
 object Kilo {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000.0
+        return unit * 1_000.0
     }
 }
 
 object Mega {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000.0
+        return unit * 1_000_000.0
     }
 }
 
 object Giga {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000.0
+        return unit * 1_000_000_000.0
     }
 }
 
 object Tera {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000000.0
+        return unit * 1_000_000_000_000.0
     }
 }
 
 object Peta {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000000000.0
+        return unit * 1_000_000_000_000_000.0
     }
 }
 
 object Exa {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000000000000.0
+        return unit * 1_000_000_000_000_000_000.0
     }
 }
 
 object Zetta {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000000000000000.0
+        return unit * 1_000_000_000_000_000_000_000.0
     }
 }
 
 object Yotta {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * 1000000000000000000000000.0
+        return unit * 1_000_000_000_000_000_000_000_000.0
     }
 }
 
@@ -135,43 +137,43 @@ object Milli {
 
 object Micro {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000001
+        return unit * .000_001
     }
 }
 
 object Nano {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000001
+        return unit * .000_000_001
     }
 }
 
 object Pico {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000000001
+        return unit * .000_000_000_001
     }
 }
 
 object Femto {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000000000001
+        return unit * .000_000_000_000_001
     }
 }
 
 object Atto {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000000000000001
+        return unit * .000_000_000_000_000_001
     }
 }
 
 object Zepto {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000000000000000001
+        return unit * .000_000_000_000_000_000_001
     }
 }
 
 object Yocto {
     operator fun invoke(unit : BaseUnit) : BaseUnit {
-        return unit * .000000000000000000000001
+        return unit * .000_000_000_000_000_000_000_001
     }
 }
 

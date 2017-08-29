@@ -1,7 +1,5 @@
 package de.komath.units
 
-import com.google.common.collect.ForwardingObject
-import com.google.common.collect.Interner
 import java.time.Duration
 
 class Amount<U : DerivedUnit>(val value: Double, val unit : U) {
@@ -116,8 +114,10 @@ fun main(args: Array<String>) {
     
     println(Kilo(Gram))
     
-    println(10 * Milli(Tonne) to MilliGram)
+    println(10 * Milli(Tonne) to Milligram)
     
-    println(Yocto(Meter) * Tonne)
+    println((1 * Yocto(Meter) * Tonne).toString())
+    
+    println(1 * Mole * 12 * UnifiedAtomicMassUnit * 6.02214085774e23 / Mole)
     
 }

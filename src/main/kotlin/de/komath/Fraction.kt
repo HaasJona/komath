@@ -409,7 +409,7 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
 
     private fun round(divide: BigInteger, remainder: BigInteger, roundingMode: RoundingMode): BigInteger {
 
-        fun roundUp(divide: BigInteger) = if (divide.signum() >= 0) divide + BigInteger.ONE else divide - BigInteger.ONE
+        fun roundUp() = if (divide.signum() >= 0) divide + BigInteger.ONE else divide - BigInteger.ONE
 
         val roundingModeInt = when (roundingMode) {
             RoundingMode.CEILING -> if(numerator.signum() < 0) RoundingMode.DOWN else RoundingMode.UP
@@ -418,10 +418,10 @@ class Fraction internal constructor(val numerator: BigInteger, val denominator: 
             else -> roundingMode
         }
         return when(roundingModeInt){
-            RoundingMode.UP -> if(remainder != BigInteger.ZERO) roundUp(divide) else divide
+            RoundingMode.UP -> if(remainder != BigInteger.ZERO) roundUp() else divide
             RoundingMode.DOWN -> divide
-            RoundingMode.HALF_UP -> if(remainder.abs().shiftLeft(1) >= denominator) roundUp(divide) else divide
-            RoundingMode.HALF_DOWN -> if(remainder.abs().shiftLeft(1) > denominator) roundUp(divide) else divide
+            RoundingMode.HALF_UP -> if(remainder.abs().shiftLeft(1) >= denominator) roundUp() else divide
+            RoundingMode.HALF_DOWN -> if(remainder.abs().shiftLeft(1) > denominator) roundUp() else divide
             else -> if(remainder == BigInteger.ZERO) divide else throw ArithmeticException("rounding necessary")
         }
     }
