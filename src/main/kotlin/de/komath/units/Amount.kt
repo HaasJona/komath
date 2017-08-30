@@ -47,11 +47,22 @@ class Amount<U : DerivedUnit>(val value: Double, val unit : U) {
     }
 
     fun normalize(): Amount<*> {
+        if (unit is NonProportionalUnit<*>) {
+            return unit.normalize(value)
+        }
         return unit.normalize() * value
     }
-    
+
+    private fun denormalize(newUnit: DerivedUnit): Amount<*> {
+        if (newUnit is NonProportionalUnit<*>) {
+            return newUnit.denormalize(value) * newUnit
+        }
+        return this / newUnit.normalize() * newUnit
+    }
+
     infix fun <N : DerivedUnit> to(newUnit : N) : Amount<N> {
-        val amount = unit.normalize() / newUnit.normalize() * newUnit * value
+        val normalized = normalize()
+        val amount = normalized.denormalize(newUnit)
         if(amount.unit != newUnit) {
             throw IllegalArgumentException("Unit ${amount.unit.normalize().unit} can not be converted to $newUnit")
         }
@@ -84,6 +95,13 @@ class Amount<U : DerivedUnit>(val value: Double, val unit : U) {
 
 }
 
+abstract class NonProportionalUnit<T : DerivedUnit> : BaseUnit {
+    abstract fun normalize(value: Double): Amount<T>
+
+    abstract fun denormalize(value: Double): Double
+
+}
+
 operator fun <U : DerivedUnit> Number.times(unit : U) : Amount<U> {
     return Amount(toDouble(), unit)
 }
@@ -96,9 +114,10 @@ fun Amount<Second>.toDuration() = Duration.ofSeconds(value.toLong())
 
 fun main(args: Array<String>) {
     val a = 500 * Kilo(Meter) / (100 * Meter)
-    println(a)
+    println(a to Unity)
     val b = 500 * Kilo(Meter) / Hour
     println(b)
+
     println(a.normalize())
     println(b.normalize())
     println(500 * Second)

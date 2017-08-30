@@ -38,7 +38,7 @@ sealed class SiUnit(override val symbol: String, val fullname: String, override 
     override fun hashCode(): Int = sortHint
 }
 
-class SiFormatter(val symbol: String, val name: String, val multiplication: Double, val positivePrefixes: Boolean, val negativePrefixes: Boolean, private val pow: Int) : BaseUnitFormatter {
+class SiFormatter(val symbol: String, val name: String, val multiplication: Double = 1.0, val positivePrefixes: Boolean, val negativePrefixes: Boolean, private val pow: Int = 1) : BaseUnitFormatter {
 
     override fun power(power: Int) : SiFormatter {
         return SiFormatter(symbol, name, Math.pow(multiplication, power.toDouble()), positivePrefixes, negativePrefixes, this.pow * power)
@@ -92,31 +92,39 @@ class SiFormatter(val symbol: String, val name: String, val multiplication: Doub
     }
 
     fun factorName(factor: Double): String {
-        return when(factor * multiplication) {
-            1.0 -> name
-            10.0 -> "Deca$name".toLowerCase().capitalize()
-            100.0 -> "Hecto$name".toLowerCase().capitalize()
-            1000.0 -> "Kilo$name".toLowerCase().capitalize()
-            1000_000.0 -> "Mega$name".toLowerCase().capitalize()
-            1000_000_000.0 -> "Giga$name".toLowerCase().capitalize()
-            1000_000_000_000.0 -> "Tera$name".toLowerCase().capitalize()
-            1000_000_000_000_000.0 -> "Peta$name".toLowerCase().capitalize()
-            1000_000_000_000_000_000.0 -> "Exa$name".toLowerCase().capitalize()
-            1000_000_000_000_000_000_000.0 -> "Zetta$name".toLowerCase().capitalize()
-            1000_000_000_000_000_000_000_000.0 -> "Yotta$name".toLowerCase().capitalize()
-            .1 -> "Deci$name".toLowerCase().capitalize()
-            .01 -> "Centi$name".toLowerCase().capitalize()
-            .001 -> "Milli$name".toLowerCase().capitalize()
-            .000_001 -> "Micro$name".toLowerCase().capitalize()
-            .000_000_001 -> "Nano$name".toLowerCase().capitalize()
-            .000_000_000_001 -> "Pico$name".toLowerCase().capitalize()
-            .000_000_000_000_001 -> "Femto$name".toLowerCase().capitalize()
-            .000_000_000_000_000_001 -> "Atto$name".toLowerCase().capitalize()
-            .000_000_000_000_000_000_001 -> "Zepto$name".toLowerCase().capitalize()
-            .000_000_000_000_000_000_000_001 -> "Yocto$name".toLowerCase().capitalize()
-            else -> "$factor·$name"
+        val tmp = factor * multiplication
+        when (tmp) {
+            1.0 -> return name
         }
-        
+        if (positivePrefixes) {
+            when (tmp) {
+                10.0 -> return "Deca$name".toLowerCase().capitalize()
+                100.0 -> return "Hecto$name".toLowerCase().capitalize()
+                1000.0 -> return "Kilo$name".toLowerCase().capitalize()
+                1000_000.0 -> return "Mega$name".toLowerCase().capitalize()
+                1000_000_000.0 -> return "Giga$name".toLowerCase().capitalize()
+                1000_000_000_000.0 -> return "Tera$name".toLowerCase().capitalize()
+                1000_000_000_000_000.0 -> return "Peta$name".toLowerCase().capitalize()
+                1000_000_000_000_000_000.0 -> return "Exa$name".toLowerCase().capitalize()
+                1000_000_000_000_000_000_000.0 -> return "Zetta$name".toLowerCase().capitalize()
+                1000_000_000_000_000_000_000_000.0 -> return "Yotta$name".toLowerCase().capitalize()
+            }
+        }
+        if (positivePrefixes) {
+            when (tmp) {
+                .1 -> return "Deci$name".toLowerCase().capitalize()
+                .01 -> return "Centi$name".toLowerCase().capitalize()
+                .001 -> return "Milli$name".toLowerCase().capitalize()
+                .000_001 -> return "Micro$name".toLowerCase().capitalize()
+                .000_000_001 -> return "Nano$name".toLowerCase().capitalize()
+                .000_000_000_001 -> return "Pico$name".toLowerCase().capitalize()
+                .000_000_000_000_001 -> return "Femto$name".toLowerCase().capitalize()
+                .000_000_000_000_000_001 -> return "Atto$name".toLowerCase().capitalize()
+                .000_000_000_000_000_000_001 -> return "Zepto$name".toLowerCase().capitalize()
+                .000_000_000_000_000_000_000_001 -> return "Yocto$name".toLowerCase().capitalize()
+            }
+        }
+        return "$factor·$name"
     }
 }
 

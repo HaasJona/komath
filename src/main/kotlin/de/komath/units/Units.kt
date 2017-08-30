@@ -185,6 +185,11 @@ interface DerivedUnit {
     override fun toString() : String
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
+
+    infix fun pow(pow: Int) : DerivedUnit {
+        if(pow == 1) return this
+        return getUnit(baseComponents.mapValues { it.value * pow })
+    }
 }
 
 interface BaseUnit : DerivedUnit {
@@ -192,6 +197,11 @@ interface BaseUnit : DerivedUnit {
     fun factorSymbol(factor: Double): String
     fun factorName(factor: Double): String
     val sortHint: Int
+
+    override infix fun pow(pow: Int) : DerivedUnit {
+        if(pow == 1) return this
+        return BaseUnitPower(this, pow)
+    }
 }
 
 abstract class AbstractUnit : DerivedUnit {
@@ -244,16 +254,6 @@ operator fun DerivedUnit.div(unit: DerivedUnit) : DerivedUnit {
         }
     }
     return getUnit(map)
-}
-
-infix fun DerivedUnit.pow(pow: Int) : DerivedUnit {
-    if(pow == 1) return this
-    return getUnit(baseComponents.mapValues { it.value * pow })
-}
-
-infix fun BaseUnit.pow(pow: Int) : DerivedUnit {
-    if(pow == 1) return this
-    return BaseUnitPower(this, pow)
 }
 
 fun getUnit(unitPowers: Map<BaseUnit, Int>): DerivedUnit {
