@@ -7,8 +7,10 @@ import java.text.NumberFormat
 
 
 // Derived Units
-object Radian : AbstractUnit(), BaseUnit by Unity.rename("rad", "Radian", false, false)
-object Steradian : AbstractUnit(), BaseUnit by Unity.rename("sr", "Steradian", false, false)
+object Radian : AbstractUnit(), BaseUnit by Unity.rename("rad", "Radian", false, true)
+object Steradian : AbstractUnit(), BaseUnit by Unity.rename("sr", "Steradian", false, true)
+object Turn : AbstractUnit(), BaseUnit by Radian.times(Math.PI * 2, "τ", "Turn", false, false)
+object Revolution : AbstractUnit(), BaseUnit by Radian.times(Math.PI * 2, "rev", "Revolution", true, true)
 object Hertz : AbstractUnit(), BaseUnit by Second.pow(-1).rename("Hz", "Hertz", true, true)
 object Newton : AbstractUnit(), BaseUnit by Meter.times(Kilogram).times(Second.pow(-2)).rename("N", "Newton", true, true)
 object Pascal : AbstractUnit(), BaseUnit by (Newton / Meter / Meter).rename("Pa", "Pascal", true, true)
@@ -204,6 +206,14 @@ interface BaseUnit : DerivedUnit {
     }
 }
 
+
+abstract class NonProportionalUnit<T : DerivedUnit> : DerivedUnit {
+    abstract fun normalize(value: Double): Amount<*>
+
+    abstract fun denormalize(value: Double): Double
+
+}
+
 abstract class AbstractUnit : DerivedUnit {
 
     override fun equals(other: Any?): Boolean {
@@ -329,7 +339,7 @@ class FactorUnit(val unit: DerivedUnit, val factor: Double, override val symbol:
         return name
     }
 
-    override val formatter = SiFormatter(symbol, name,1.0, positivePrefixes, negativePrefixes, 1)
+    override val formatter = StandardFormatter(symbol, name, 1.0, positivePrefixes, negativePrefixes, 1)
     
     override val baseComponents: Map<BaseUnit, Int> = ImmutableMap.of(this, 1)
 }
@@ -391,7 +401,7 @@ class RenamedUnit(val base: DerivedUnit, override val symbol: String, val name: 
         return base.normalize()
     }
 
-    override val formatter = SiFormatter(symbol, name,1.0, positivePrefixes, negativePrefixes, 1)
+    override val formatter = StandardFormatter(symbol, name, 1.0, positivePrefixes, negativePrefixes, 1)
     
     override val baseComponents: Map<BaseUnit, Int> = ImmutableMap.of(this, 1)
 

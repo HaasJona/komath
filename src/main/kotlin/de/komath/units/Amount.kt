@@ -95,13 +95,6 @@ class Amount<U : DerivedUnit>(val value: Double, val unit : U) {
 
 }
 
-abstract class NonProportionalUnit<T : DerivedUnit> : BaseUnit {
-    abstract fun normalize(value: Double): Amount<T>
-
-    abstract fun denormalize(value: Double): Double
-
-}
-
 operator fun <U : DerivedUnit> Number.times(unit : U) : Amount<U> {
     return Amount(toDouble(), unit)
 }

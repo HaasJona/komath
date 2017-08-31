@@ -1,16 +1,5 @@
 package de.komath.units
 
-interface UnitFormatter {
-    
-    fun format(value: Double) : String
-
-}
-
-interface BaseUnitFormatter : UnitFormatter {
-    fun power(power: Int): BaseUnitFormatter
-
-}
-
 fun appendUnit(stringBuilder: StringBuilder, unit: String, power: Int, powerMultiplier: Int, positivePrefixes: Boolean, negativePrefixes: Boolean) {
     appendUnit(powerMultiplier, stringBuilder, power, positivePrefixes, negativePrefixes)
     stringBuilder.append(unit)
@@ -119,4 +108,8 @@ fun toSuperScript(exponent: Int): CharArray {
         }
     }
     return chars
+}
+
+interface UnitFormatter {
+    fun format(value: Double) : String
 }
